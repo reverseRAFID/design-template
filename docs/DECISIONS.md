@@ -1130,8 +1130,23 @@ Router** convention, not Vercel's. A plain file in `api/` is invoked the Node wa
 it deploys, and it fails at the first request. It is now `export default async
 function handler(req, res)`, with the small slice of Node's req/res it uses typed
 locally so the file still needs no dependency. `readBody` normalises all four
-things the platform may hand over — parsed object, string, Buffer, or an unread
+things the platform may hand over — parsed object, string, bytes, or an unread
 stream — because which one you get depends on the content type.
+
+That fixed the shape and the function still returned 500, because there was a
+second fault underneath it: **`import { … } from './_commit'`**. The package is
+`"type": "module"`, and ESM will not resolve an extensionless relative path at
+runtime — the module throws ERR_MODULE_NOT_FOUND before the handler is ever
+called. Nothing catches it: it type-checks (bundler resolution), it builds, it
+deploys, and every request 500s. Reproduced locally in three commands — compile
+the file to ESM, `import()` it in Node, watch it fail — which is worth remembering
+as the way to test a serverless function without deploying it.
+
+The fix is that `api/manifest.ts` now **imports nothing at all**: the helpers moved
+into it, `node:crypto` gave way to a hand-rolled constant-time compare and `Buffer`
+to `TextEncoder`/`btoa`. No imports, no resolution, no crash — and with no Node
+builtins, the runtime it lands on stops mattering. A test asserts the file stays
+import-free, because neither the compiler nor the build will ever tell you.
 
 **The site was serving an old deployment.** The board in the repo said
 `myactuator, satel, msi, sbg-systems`; the site served `completech, msi,

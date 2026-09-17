@@ -10,7 +10,7 @@ import {
   parseManifest,
   readConfig,
   serialize,
-} from '../api/_commit';
+} from '../api/manifest';
 
 /**
  * The save endpoint commits to the repo, so its gatekeeping is the part that has
@@ -139,5 +139,21 @@ describe('commit shape', () => {
   it('names the saver in the commit message body, not the subject', () => {
     const { message } = commitBody('{}\n', 'main', undefined, 'the brand kit');
     expect(message.split('\n')[0]).toBe('chore(sponsors): update board from the brand kit');
+  });
+});
+
+/**
+ * The failure this guards against is invisible to the type checker and to the
+ * build: with `"type": "module"`, an extensionless relative import cannot be
+ * resolved at runtime, so the function dies with ERR_MODULE_NOT_FOUND on its
+ * first request and Vercel reports only FUNCTION_INVOCATION_FAILED. Keeping the
+ * file self-contained is the guarantee (docs/DECISIONS.md D35).
+ */
+describe('the deployed function', () => {
+  it('imports nothing, so there is nothing for the runtime to fail to resolve', async () => {
+    const { readFile } = await import('node:fs/promises');
+    const source = await readFile(new URL('../api/manifest.ts', import.meta.url), 'utf8');
+    const imports = source.match(/^\s*import\s.+$/gm) ?? [];
+    expect(imports).toEqual([]);
   });
 });
