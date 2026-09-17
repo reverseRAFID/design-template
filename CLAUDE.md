@@ -19,11 +19,13 @@ Read these before writing any code, in order:
 
 ## Stack (decided — do not swap without asking)
 
-- **Vite + React 18 + TypeScript** (strict). Single-page app, no backend.
+- **Vite + React 18 + TypeScript** (strict). Single-page app; the only server-side code is
+  `api/manifest.ts`, which commits the sponsor board to the repo (see `docs/DECISIONS.md` D33).
 - **Tailwind CSS** for app UI. All brand colors come from CSS variables defined in `src/styles/tokens.css`.
 - **Canvas 2D API** for compositing and export. No html2canvas / dom-to-image.
 - **Zustand** for editor state. **JSZip** for batch export (Phase 3). **Vitest** for the layout engine.
-- Deploy target: Vercel or GitHub Pages (static). Everything runs client-side; photos never leave the browser.
+- Deploy target: **Vercel** (`vercel.json`). Photos never leave the browser — the one endpoint
+  handles the sponsor board and nothing else.
 
 ## Commands
 

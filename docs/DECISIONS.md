@@ -1025,3 +1025,49 @@ nowhere to write, so the file **downloads** and the line reads `manifest.json
 DOWNLOADED — REPLACE public/brand/sponsors/manifest.json`; refreshing there reverts
 by design, because the copy in the repo has not changed yet. The two cases are
 told apart by the status line, not by the button.
+
+## D33 — Vercel, and one endpoint so saving stops being a download
+
+On a static host SAVE POSITIONS had nowhere to write, so it downloaded
+`manifest.json` and asked someone to drop the file into the repo by hand. That is
+a fine fallback and a bad default: the arrangement is finished in the app and then
+has to survive a file manager, a commit and a push before anyone else sees it.
+
+GitHub Pages cannot do better — it serves files and nothing else. Vercel can run a
+function, so the site is now deployed there and SAVE POSITIONS POSTs to
+`api/manifest.ts`, which commits `public/brand/sponsors/manifest.json` through the
+GitHub API. The repo stays the single source of truth (D30); the function stores
+nothing and reads nothing back. A save is a commit, and the redeploy that follows
+is how everyone else gets the new board.
+
+**The endpoint is the same URL in both worlds.** The client posts to `/__manifest`;
+in development that is the Vite middleware writing to disk, in production
+`vercel.json` rewrites it to `/api/manifest`. One code path, one guard, no
+environment sniffing in the client — it tells the two apart only by whether the
+acknowledgement carries a commit sha.
+
+**A public write endpoint needs a guard**, or the first person to find
+`/api/manifest` owns the sponsor board. `MT_SAVE_KEY` is a shared secret compared
+in constant time; the app keeps it in `localStorage` and sends it as a header.
+That is a deliberate exception to "nothing about the board lives in the browser" —
+the key is permission to write the board, not the board. A wrong key returns 401
+and the app says so instead of quietly downloading, because silently falling back
+would teach people to ignore the one signal that matters.
+
+The body is checked before anything is committed: it must parse, it must have a
+non-empty `sponsors` array, and every entry must have `slug`, `tier` and `order`.
+The path is a constant, never taken from the request. GitHub's `sha` precondition
+handles two people saving at once — the second gets a 409 and is told to reload
+rather than clobbering the first.
+
+**What went away.** `.github/workflows/deploy.yml` — Vercel deploys now. What
+replaced it is `ci.yml`, which still runs lint, tests and the build on every push
+and PR, because Vercel runs only the build and would happily ship a red test suite.
+`VITE_BASE` stays in `vite.config.ts`: Vercel serves from `/`, but a subpath host
+still needs it, and it costs one line.
+
+Trade-offs taken knowingly: the board is live for everyone about a minute after a
+save rather than instantly, since it arrives by redeploy; a save needs GitHub to be
+up; and the project now has a backend, which `CLAUDE.md` previously ruled out. It
+is one function, one file, no state, and no photo ever reaches it — those never
+leave the browser.

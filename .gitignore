@@ -7,3 +7,9 @@ dist-ssr
 coverage
 dev-dist
 .sample
+
+# Vercel CLI
+.vercel
+
+# TypeScript incremental build state
+*.tsbuildinfo

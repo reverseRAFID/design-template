@@ -91,8 +91,11 @@ project, not your browser:
 
 - Running `npm run dev`: the file is written straight to disk. **Commit it** and everyone gets that
   board, in every browser.
-- On the deployed site: `manifest.json` downloads instead. Replace
-  `public/brand/sponsors/manifest.json` with it and commit.
+- **On the deployed site: it commits to the repo for you**, and Vercel redeploys about a minute
+  later. Paste the **save key** into the SAVE KEY box once (ask whoever set the site up — it is the
+  `MT_SAVE_KEY` value); the key is kept on that device until you press FORGET.
+- If the site has no save key configured, saving falls back to downloading `manifest.json` — drop
+  it into `public/brand/sponsors/` and commit it by hand.
 
 Until you save, the panel says `↳ UNSAVED` and REVERT discards the change. Nothing about the board
 is stored in your browser, so an unsaved drag is lost on reload — that is deliberate.
@@ -121,18 +124,33 @@ theme; the provenance is in `docs/DECISIONS.md` D1.
 
 ### Deploying
 
-Static build, no backend, no environment variables.
+**Vercel.** Import the repo once; `vercel.json` has the rest. Every push to `main` deploys, and
+pull requests get their own preview URL. `.github/workflows/ci.yml` runs lint, tests and the build
+on the same pushes — Vercel only runs the build, so that workflow is what stops a red test from
+shipping.
 
 ```bash
-npm run build      # -> dist/
+npm run build      # -> dist/   (the same build Vercel runs)
 ```
 
-- **GitHub Pages** — already wired. `.github/workflows/deploy.yml` lints, tests and publishes on
-  every push to `main`. The only setup is once, in the repo: **Settings → Pages → Source = "GitHub
-  Actions"**. No secrets to add.
-- **Vercel** — framework preset "Vite". Nothing else to configure.
-- **By hand**, if you need a different host: a project site lives under `/<repo>/`, so build with
-  `VITE_BASE=/<repo>/ npm run build` and publish `dist/`.
+**The four environment variables** — set them in Vercel under *Settings → Environment Variables*.
+They are what make SAVE POSITIONS commit instead of download; leave them unset and the app still
+works, it just downloads the file.
+
+| Variable | What it is |
+| --- | --- |
+| `MT_GITHUB_TOKEN` | A fine-grained personal access token with **Contents: read and write** on this repo, and nothing else. |
+| `MT_GITHUB_REPO` | `owner/repo`, e.g. `bracu-mongoltori/brand-kit`. |
+| `MT_GITHUB_BRANCH` | Optional. Defaults to `main`. |
+| `MT_SAVE_KEY` | Any long random string you make up. Whoever arranges the board types this into the app's SAVE KEY box. |
+
+`MT_SAVE_KEY` is the only thing standing between a public URL and a stranger rewriting your sponsor
+board, so make it long and share it the way you would share a password. Rotating it is one edit in
+Vercel plus a redeploy; everyone then retypes it once.
+
+**Other hosts** still work, minus the saving: any static host can serve `dist/`. A site served from
+a subpath (GitHub Pages project sites, for instance) needs `VITE_BASE=/<repo>/ npm run build`, and
+there SAVE POSITIONS downloads `manifest.json` for you to commit by hand.
 
 ---
 
@@ -140,7 +158,10 @@ npm run build      # -> dist/
 
 - **Vite + React 18 + TypeScript** (strict), **Tailwind** for the app UI, **Canvas 2D** for the image.
 - **Zustand** for editor state, **zod** to validate the sponsor manifest, **JSZip** for batch export.
-- No backend, no accounts, no uploads. A service worker precaches the brand assets and fonts.
+- No accounts, no uploads, no database. A service worker precaches the brand assets and fonts.
+- **One serverless function**, `api/manifest.ts`, and it touches exactly one file: it commits the
+  sponsor board to the repo when you press SAVE POSITIONS. Photos never reach it — they never leave
+  the browser at all.
 
 ### The one rule that matters
 
@@ -174,6 +195,7 @@ If you catch yourself typing `0.045` somewhere, import `SPONSOR_H` instead.
 ### Where things live
 
 ```
+api/             the one serverless function: commit the sponsor board to the repo
 docs/            the specification. 01-PRD, 02-DESIGN-SYSTEM, 03-ARCHITECTURE, 04-TASKS, DECISIONS
 img/partners/    the team's ORIGINAL sponsor artwork — the input to npm run import:sponsors
 public/brand/    logos + sponsors/manifest.json (generated for sponsors; edit img/ instead)

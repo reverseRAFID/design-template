@@ -25,6 +25,7 @@ import { ShareLink } from '@/components/controls/ShareLink';
 import { SegmentedToggle } from '@/components/controls/SegmentedToggle';
 import { Slider } from '@/components/controls/Slider';
 import { SponsorList } from '@/components/controls/SponsorList';
+import type { SaveOutcome } from '@/lib/manifest-writer';
 import { SponsorUpload } from '@/components/controls/SponsorUpload';
 import { PreviewStage } from '@/components/preview/PreviewStage';
 import { Eyebrow } from '@/components/ui/Eyebrow';
@@ -41,6 +42,13 @@ const TONE_OPTIONS = [
   { value: 'dark' as Tone, label: 'DARK' },
   { value: 'light' as Tone, label: 'LIGHT' },
 ] as const;
+
+/** What each save outcome means, in the team's words rather than the code's. */
+const SAVE_MESSAGE: Record<SaveOutcome, string> = {
+  written: 'SAVED TO manifest.json — COMMIT IT',
+  committed: 'COMMITTED TO THE REPO — LIVE IN ~1 MIN',
+  downloaded: 'manifest.json DOWNLOADED — REPLACE public/brand/sponsors/manifest.json',
+};
 
 export function App(): JSX.Element {
   const [bundle, setBundle] = useState<AssetBundle | null>(null);
@@ -294,12 +302,7 @@ export function App(): JSX.Element {
               <SponsorList
                 bundle={bundle}
                 onSaved={(outcome) =>
-                  toasts.push(
-                    outcome === 'written'
-                      ? 'SAVED TO manifest.json — COMMIT IT'
-                      : 'manifest.json DOWNLOADED — REPLACE public/brand/sponsors/manifest.json',
-                    'ok',
-                  )
+                  toasts.push(SAVE_MESSAGE[outcome], 'ok')
                 }
                 onError={(message) => toasts.push(message.toUpperCase(), 'warn')}
               />

@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 
 import type { AssetBundle } from '@/assets/loader';
 import { applyArrangement, tierLabel } from '@/assets/manifest';
 import { saveManifest, type SaveOutcome } from '@/lib/manifest-writer';
+import { readSaveKey, writeSaveKey } from '@/lib/save-key';
 import { Badge } from '@/components/ui/Badge';
 import { Eyebrow } from '@/components/ui/Eyebrow';
 import { Pill } from '@/components/ui/Pill';
@@ -190,6 +191,14 @@ export function SponsorList({ bundle, onSaved, onError }: SponsorListProps): JSX
   const revertArrangement = useEditorStore((s) => s.revertArrangement);
   const commitArrangement = useEditorStore((s) => s.commitArrangement);
   const [saving, setSaving] = useState(false);
+  const keyFieldId = useId();
+  const [saveKey, setSaveKey] = useState(readSaveKey);
+  /**
+   * The dev server writes the file directly and asks for nothing; only a deployed
+   * site has a key to give. Showing the field in dev would be asking for a secret
+   * that is not used.
+   */
+  const needsKey = !import.meta.env.DEV;
 
   /**
    * Saving writes the arrangement into the MANIFEST — the file in the repo — so it
@@ -202,8 +211,9 @@ export function SponsorList({ bundle, onSaved, onError }: SponsorListProps): JSX
       const outcome = await saveManifest(next);
       onSaved?.(outcome);
       // Clean again — but by adopting what was written, not by reverting to the
-      // stale in-memory order, which would show the board snapping back.
-      if (outcome === 'written') commitArrangement();
+      // stale in-memory order, which would show the board snapping back. A
+      // download has not landed anywhere yet, so that one stays dirty.
+      if (outcome !== 'downloaded') commitArrangement();
     } catch (err) {
       onError?.(err instanceof Error ? err.message : 'Could not save the arrangement.');
     } finally {
@@ -263,6 +273,45 @@ export function SponsorList({ bundle, onSaved, onError }: SponsorListProps): JSX
       <p className="mt-telemetry pb-1 pt-1.5 text-mt-text-mute">
         {arrangementDirty ? '↳ UNSAVED — SAVE TO WRITE manifest.json' : '◆ MATCHES manifest.json'}
       </p>
+
+      {needsKey ? (
+        <div className="flex flex-col gap-1.5 pb-2">
+          <label htmlFor={keyFieldId} className="mt-telemetry text-mt-text-mute">
+            SAVE KEY
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              id={keyFieldId}
+              type="password"
+              value={saveKey}
+              autoComplete="off"
+              spellCheck={false}
+              placeholder="PASTE TO ENABLE SAVING"
+              onChange={(event) => {
+                setSaveKey(event.target.value);
+                writeSaveKey(event.target.value.trim());
+              }}
+              className="min-w-0 flex-1 rounded-md border border-mt-line bg-mt-surface-2 px-2 py-1.5 font-mono text-[11px] tracking-[0.08em] text-mt-text placeholder:text-mt-text-mute focus:border-mt-orange"
+            />
+            {saveKey ? (
+              <Pill
+                variant="ghost"
+                size="sm"
+                aria-label="Forget the save key on this device"
+                onClick={() => {
+                  setSaveKey('');
+                  writeSaveKey('');
+                }}
+              >
+                FORGET
+              </Pill>
+            ) : null}
+          </div>
+          <p className="mt-telemetry text-mt-text-mute">
+            Kept on this device. Without it, saving downloads manifest.json instead.
+          </p>
+        </div>
+      ) : null}
 
       {total === 0 ? (
         <p className="mt-telemetry text-mt-text-mute">No sponsors in manifest</p>

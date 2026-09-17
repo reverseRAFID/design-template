@@ -1,0 +1,43 @@
+name: CI
+
+# The three gates, on every push and pull request.
+#
+# Deployment is NOT here any more: Vercel builds and deploys the repo itself
+# (docs/DECISIONS.md D33). This workflow stays because Vercel will happily deploy
+# a build that fails lint or tests — it only runs `npm run build`.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      # The same three, in the same order as local development.
+      - name: Lint (includes the no-pure-white check)
+        run: npm run lint
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
