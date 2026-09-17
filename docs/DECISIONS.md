@@ -944,3 +944,42 @@ file modified with the new order. Then — the actual thing the team asked for �
 worker) and the board still came back from the file.** The only key left is
 `mt-brandkit:v1`, holding preset, tone, frame, scrim, selection and label; nothing
 about the arrangement.
+
+---
+
+## D31 — Mobile was broken in three ways, all found by looking
+
+Tested at 390px by rendering the app inside a narrow iframe — the OS window
+resize did not change the page's viewport, so the media queries never fired and
+the "mobile" screenshot was just the desktop layout at a smaller scale. The iframe
+gives the page inside it a real 390px viewport.
+
+**1. The side panels collapsed and their content overlapped.** Both carried
+`min-h-0`, which is what lets the desktop GRID columns scroll. In the stacked
+mobile column the same rule let them shrink far below their content — the left rail
+was 75px tall holding six preset pills — so FORMAT rendered on top of TREATMENT.
+`min-h-0` is now `lg:` only, with `shrink-0` below it.
+
+**2. Two nested scrollbars.** The shell had a fixed height and its own
+`overflow-y-auto` at every width, so the page scrolled AND an inner div scrolled.
+There are now two deliberate models: desktop pins the shell to the viewport so the
+preview never leaves the screen and each column scrolls on its own; **mobile lets
+the page scroll and nothing inside it**, because an inner scroller on a phone
+fights the browser's own chrome-collapsing scroll. `html, body { overflow: hidden }`
+is scoped to `lg` for the same reason — locking it on a phone would make everything
+below the preview unreachable.
+
+**3. Sponsors could not be reordered on a phone at all.** HTML5 drag-and-drop does
+not work on touch, and the ↑/↓ buttons were `opacity-0` until hover — which never
+happens on a touchscreen. The arrows are now always visible below `lg` and keep
+the reveal-on-hover on desktop, where dragging is the primary gesture. The `⠿`
+drag handle is hidden below `lg`, since advertising a gesture that cannot work
+there is worse than not showing it.
+
+Verified after the fix at 390px: no overlap, no horizontal overflow, nothing wider
+than the viewport, a single page scroll, and tapping ↑/↓ reorders and marks the
+board unsaved. Desktop re-checked: three columns, column-level scrolling, arrows
+still hover-revealed.
+
+Also fixed in passing: the telemetry field still read `DEFAULT: URC · IRC · ERC`,
+which stopped being true at D23 when the standing text was removed.

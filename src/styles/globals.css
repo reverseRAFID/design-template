@@ -110,6 +110,22 @@
   }
 }
 
+/*
+ * Desktop pins the app to the viewport: the three columns scroll, the page does
+ * not. Relying on `overflow-hidden` on the shell alone was not enough — the root
+ * scroller still reported the clipped content and the page could be scrolled
+ * programmatically, dragging the preview off screen.
+ *
+ * Deliberately lg-only. On a phone the page MUST scroll: that is the whole
+ * layout, and locking it would make everything below the preview unreachable.
+ */
+@media (min-width: 1024px) {
+  html,
+  body {
+    overflow: hidden;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

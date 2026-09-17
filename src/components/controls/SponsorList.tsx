@@ -348,8 +348,8 @@ export function SponsorList({ bundle, onSaved, onError }: SponsorListProps): JSX
                   >
                     <span
                       aria-hidden="true"
-                      title="Drag to reorder, or into another tier"
-                      className="cursor-grab select-none font-mono text-[11px] leading-none text-mt-text-mute"
+                      title="Drag to reorder, or into another tier (or use the arrows)"
+                      className="hidden cursor-grab select-none font-mono text-[11px] leading-none text-mt-text-mute lg:inline"
                     >
                       ⠿
                     </span>
@@ -375,8 +375,13 @@ export function SponsorList({ bundle, onSaved, onError }: SponsorListProps): JSX
                       ◆
                     </span>
 
-                    {/* Dragging is mouse-only, so the same move needs buttons too. */}
-                    <span className="flex shrink-0 items-center opacity-0 transition-opacity duration-state focus-within:opacity-100 group-hover:opacity-100">
+                    {/*
+                      Always visible on touch: HTML5 drag-and-drop does not work on
+                      a phone and there is no hover to reveal these, so hiding them
+                      below lg made reordering impossible there. Desktop keeps the
+                      reveal-on-hover, where dragging is the primary gesture.
+                    */}
+                    <span className="flex shrink-0 items-center transition-opacity duration-state lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover:opacity-100">
                       <button
                         type="button"
                         aria-label={`Move ${sponsor.name} earlier in tier ${sponsor.tier}`}

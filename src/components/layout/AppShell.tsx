@@ -12,13 +12,18 @@ const STAGE_ID = 'mt-stage';
 
 /**
  * Three columns on desktop, stacked with the preview on top below 1024px.
- * The viewport box owns the only scrollbar on desktop (`overflow-hidden` here,
- * `overflow-y-auto` on each column); below lg the body column scrolls instead,
- * so the page never scrolls twice.
+ *
+ * Two different scrolling models, on purpose:
+ *
+ * - **Desktop** pins the shell to the viewport (`h-[100dvh]`, `overflow-hidden`)
+ *   and lets each column scroll on its own, so the preview never leaves the screen.
+ * - **Mobile** lets the PAGE scroll, and nothing inside it. An inner scroller on a
+ *   phone fights the browser's own chrome-collapsing scroll and, when the shell
+ *   also had a fixed height, produced two nested scrollbars.
  */
 export function AppShell({ header, left, centre, right, footer }: AppShellProps): JSX.Element {
   return (
-    <div className="flex h-[100dvh] flex-col overflow-hidden">
+    <div className="flex min-h-[100dvh] flex-col lg:h-[100dvh] lg:overflow-hidden">
       <a
         href={`#${STAGE_ID}`}
         className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-pill focus:bg-mt-orange focus:px-4 focus:py-2 focus:text-mt-ink"
@@ -28,7 +33,7 @@ export function AppShell({ header, left, centre, right, footer }: AppShellProps)
 
       {header}
 
-      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto lg:grid lg:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)_minmax(18rem,21rem)] lg:overflow-hidden">
+      <div className="flex flex-1 flex-col lg:grid lg:min-h-0 lg:grid-cols-[minmax(17rem,20rem)_minmax(0,1fr)_minmax(18rem,21rem)] lg:overflow-hidden">
         {left}
 
         {/* min-h-0 + flex is what lets the preview measure its own box instead of
@@ -37,7 +42,7 @@ export function AppShell({ header, left, centre, right, footer }: AppShellProps)
         <main
           id={STAGE_ID}
           tabIndex={-1}
-          className="order-first flex min-h-[55vh] min-w-0 flex-col overflow-hidden p-4 lg:order-none lg:min-h-0 lg:p-6"
+          className="order-first flex min-h-[60vh] min-w-0 shrink-0 flex-col overflow-hidden p-4 lg:order-none lg:min-h-0 lg:shrink lg:p-6"
         >
           {centre}
         </main>

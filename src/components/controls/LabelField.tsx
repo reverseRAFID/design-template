@@ -52,7 +52,7 @@ export function LabelField({ value, onChange }: LabelFieldProps): JSX.Element {
           USE TODAY
         </Pill>
         <span className="mt-telemetry text-mt-text-mute" aria-live="polite">
-          {value ? `${remaining} LEFT` : 'DEFAULT: URC · IRC · ERC'}
+          {value ? `${remaining} LEFT` : 'OPTIONAL — LEFT OF THE DATE'}
         </span>
       </div>
     </div>
