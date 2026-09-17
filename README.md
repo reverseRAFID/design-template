@@ -84,10 +84,17 @@ same visual size regardless of tier — tier picks the row, not the prominence. 
 left-to-right position, but you can also just **drag sponsors into place in the app** — including
 from one tier to another — or use the ↑/↓ buttons on each row.
 
-**Press SAVE POSITIONS when you are happy with the board.** Until you do, the arrangement is only a
-convenience and a "reset to defaults" will put it back. Once saved it survives resets, reloads and
-adding new sponsors, and it travels in a share link. RESET next to it is the only thing that
-discards it.
+**Press SAVE POSITIONS when you are happy with the board.** That rewrites
+`public/brand/sponsors/manifest.json` — the file in the repo — so the arrangement follows the
+project, not your browser:
+
+- Running `npm run dev`: the file is written straight to disk. **Commit it** and everyone gets that
+  board, in every browser.
+- On the deployed site: `manifest.json` downloads instead. Replace
+  `public/brand/sponsors/manifest.json` with it and commit.
+
+Until you save, the panel says `↳ UNSAVED` and REVERT discards the change. Nothing about the board
+is stored in your browser, so an unsaved drag is lost on reload — that is deliberate.
 
 Logos are not all drawn at the same height: each is nudged toward equal visual *area*, so a long
 wordmark does not swamp a square mark. `docs/DECISIONS.md` D16 and D18 cover the tuning.

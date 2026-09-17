@@ -67,6 +67,44 @@ export const ManifestSchema = z
 
 export type SponsorManifest = z.infer<typeof ManifestSchema>;
 
+/**
+ * Fold a dragged arrangement back into the manifest.
+ *
+ * The manifest's `tier` and `order` ARE the sponsor board — so an arrangement is
+ * expressed by rewriting them, not by keeping a parallel copy somewhere else
+ * (docs/DECISIONS.md D30). `order` is renumbered from 1 within each tier, so the
+ * file stays readable by hand.
+ */
+export function applyArrangement(
+  manifest: SponsorManifest,
+  order: readonly string[],
+  tiers: Readonly<Record<string, number>>,
+): SponsorManifest {
+  const rank = new Map(order.map((slug, index) => [slug, index]));
+
+  const placed = [...manifest.sponsors]
+    .map((sponsor) => ({ ...sponsor, tier: tiers[sponsor.slug] ?? sponsor.tier }))
+    .sort(
+      (a, b) =>
+        a.tier - b.tier ||
+        // Anything the arrangement does not mention keeps its manifest position,
+        // after everything it does.
+        (rank.get(a.slug) ?? Number.MAX_SAFE_INTEGER) -
+          (rank.get(b.slug) ?? Number.MAX_SAFE_INTEGER) ||
+        a.order - b.order ||
+        a.slug.localeCompare(b.slug),
+    );
+
+  const nextOrder = new Map<number, number>();
+  const sponsors = placed.map((sponsor) => {
+    const n = (nextOrder.get(sponsor.tier) ?? 0) + 1;
+    nextOrder.set(sponsor.tier, n);
+    return { ...sponsor, order: n };
+  });
+
+  return { ...manifest, sponsors };
+}
+
 /** Label for a tier, e.g. 1 → "Platinum". Falls back to a neutral label. */
 export function tierLabel(manifest: SponsorManifest, tier: number): string {
   return manifest.tiers[String(tier)] ?? `Tier ${tier}`;

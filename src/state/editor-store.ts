@@ -17,14 +17,7 @@ import { DEFAULT_PRESET_ID, getPreset, getPresetOrDefault } from '@/engine/prese
 import { IDENTITY_TRANSFORM } from '@/engine/types';
 import type { ImageTransform, PresetId, Scene, SourceImage, SponsorMeta, Tone } from '@/engine/types';
 import { todayLabelDate } from '@/lib/filename';
-import {
-  clearArrangement as clearArrangementFromStorage,
-  clearPersisted,
-  loadArrangement,
-  loadPersisted,
-  saveArrangement as saveArrangementToStorage,
-  savePersisted,
-} from '@/lib/persist';
+import { clearPersisted, loadPersisted, savePersisted } from '@/lib/persist';
 import type { PersistedState } from '@/lib/persist';
 import type { SharedSettings } from '@/lib/share-url';
 
@@ -58,8 +51,11 @@ interface EditorData {
   sponsorOrder: string[];
   /** Tier overrides, set by dragging a sponsor into another tier's row. */
   sponsorTiers: Record<string, number>;
-  /** True when an arrangement has been pinned. Drives the UI's saved/unsaved hint. */
-  arrangementPinned: boolean;
+  /**
+   * The arrangement differs from the manifest, i.e. there are unsaved changes.
+   * The manifest is the store of record, so this is the only "dirty" flag there is.
+   */
+  arrangementDirty: boolean;
   label: string;
 }
 
@@ -96,13 +92,13 @@ export interface EditorState extends EditorData {
   moveSponsorToTier(slug: string, tier: number): void;
   /** Keyboard equivalent of a drag: one step left or right within the tier. */
   nudgeSponsor(slug: string, delta: -1 | 1): void;
+  /** Discard any unsaved dragging and go back to what the manifest says. */
+  revertArrangement(): void;
   /**
-   * Pin the current arrangement. Written immediately to its own key, and reapplied
-   * on every boot, so nothing can quietly put the board back to manifest order.
+   * Adopt the arrangement that was just written to the manifest, so the in-memory
+   * board matches the file without waiting for a reload.
    */
-  saveArrangement(): void;
-  /** Drop the pinned arrangement and go back to the manifest's tiers and order. */
-  clearArrangement(): void;
+  commitArrangement(): void;
   setLabel(v: string): void;
   /** Apply a shared settings link. Treated as a deliberate choice, like a click. */
   applyShared(settings: SharedSettings): void;
@@ -132,29 +128,27 @@ let sponsorMeta: Record<string, SponsorMeta> = {};
 export function registerSponsors(meta: Record<string, SponsorMeta>): void {
   sponsorMeta = meta;
 
-  // A pinned arrangement wins over whatever the volatile state happens to hold —
-  // that pin is the user saying "this is the board", and it has to survive.
-  const pinned = loadArrangement();
-  const base = pinned ? pinned.order : useEditorStore.getState().sponsorOrder;
+  // The manifest IS the board (docs/DECISIONS.md D30), so a boot starts from it —
+  // tier and order come off disk, not out of this browser.
+  //
+  // The exception is UNSAVED dragging. This function also runs when the asset
+  // bundle reloads mid-session (uploading a sponsor logo does that), and throwing
+  // away someone's in-progress arrangement because they added a logo would be a
+  // silent data loss. So a dirty board is kept and reconciled instead.
+  const state = useEditorStore.getState();
+  if (!state.arrangementDirty) {
+    useEditorStore.setState({ sponsorOrder: registrySlugs(), sponsorTiers: {} });
+    return;
+  }
 
-  // Reconcile with the manifest: keep the slugs the user arranged, in their order,
-  // then append anything new by its manifest position. Adding a sponsor therefore
-  // never scrambles an arrangement.
   const known = registrySlugs();
-  const kept = base.filter((slug) => slug in meta);
+  const kept = state.sponsorOrder.filter((slug) => slug in meta);
   const seen = new Set(kept);
-
   useEditorStore.setState({
     sponsorOrder: [...kept, ...known.filter((slug) => !seen.has(slug))],
-    ...(pinned
-      ? {
-          // Drop overrides for sponsors that no longer exist.
-          sponsorTiers: Object.fromEntries(
-            Object.entries(pinned.tiers).filter(([slug]) => slug in meta),
-          ),
-          arrangementPinned: true,
-        }
-      : {}),
+    sponsorTiers: Object.fromEntries(
+      Object.entries(state.sponsorTiers).filter(([slug]) => slug in meta),
+    ),
   });
 }
 
@@ -202,9 +196,6 @@ function orderSelection(slugs: Iterable<string>): string[] {
 
 const persisted = loadPersisted();
 
-/** Pinned once, at module load, the same way `persisted` is. */
-const pinnedArrangement = loadArrangement();
-
 /**
  * True when a previous session stored a selection — including an empty one, which
  * is a real choice ("no sponsors") and must not be overwritten by setAllSponsors.
@@ -239,9 +230,10 @@ function bootState(): EditorData {
     frame: persisted.frame ?? preset.defaultFrame,
     scrim: persisted.scrim ?? DEFAULT_SCRIM,
     selectedSponsors: persisted.selectedSponsors ?? [],
-    sponsorOrder: persisted.sponsorOrder ?? [],
-    sponsorTiers: persisted.sponsorTiers ?? {},
-    arrangementPinned: pinnedArrangement !== null,
+    // Seeded from the manifest by registerSponsors; never from the browser.
+    sponsorOrder: [],
+    sponsorTiers: {},
+    arrangementDirty: false,
     label: persisted.label ?? '',
   };
 }
@@ -259,7 +251,7 @@ function defaultState(): Omit<EditorData, 'image' | 'images' | 'activeIndex'> {
     selectedSponsors: registrySlugs(),
     sponsorOrder: registrySlugs(),
     sponsorTiers: {},
-    arrangementPinned: false,
+    arrangementDirty: false,
     label: '',
   };
 }
@@ -419,15 +411,29 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     });
   },
 
-  saveArrangement() {
-    const s = get();
-    saveArrangementToStorage({ order: s.sponsorOrder, tiers: s.sponsorTiers });
-    set({ arrangementPinned: true });
+  revertArrangement() {
+    set({ sponsorOrder: registrySlugs(), sponsorTiers: {}, arrangementDirty: false });
   },
 
-  clearArrangement() {
-    clearArrangementFromStorage();
-    set({ sponsorOrder: registrySlugs(), sponsorTiers: {}, arrangementPinned: false });
+  commitArrangement() {
+    const { sponsorOrder, sponsorTiers } = get();
+
+    // The registry holds the SAME objects the asset bundle exposes as `meta`, so
+    // updating tier/order here keeps the sponsor list, the layout and the file in
+    // agreement. Without it, clearing the dirty flag would snap the UI back to the
+    // pre-save order while the file on disk said something else.
+    const nextOrder = new Map<number, number>();
+    for (const slug of sponsorOrder) {
+      const entry = sponsorMeta[slug];
+      if (!entry) continue;
+      const tier = sponsorTiers[slug] ?? entry.tier;
+      const n = (nextOrder.get(tier) ?? 0) + 1;
+      nextOrder.set(tier, n);
+      entry.tier = tier;
+      entry.order = n;
+    }
+
+    set({ sponsorOrder: registrySlugs(), sponsorTiers: {}, arrangementDirty: false });
   },
 
   moveSponsor(slug, beforeSlug) {
@@ -442,7 +448,11 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       if (at < 0) return {};
       order.splice(at, 0, slug);
 
-      return { sponsorOrder: order, sponsorTiers: withTier(s.sponsorTiers, slug, tier) };
+      return {
+        sponsorOrder: order,
+        sponsorTiers: withTier(s.sponsorTiers, slug, tier),
+        arrangementDirty: true,
+      };
     });
   },
 
@@ -453,7 +463,11 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
       const order = s.sponsorOrder.filter((entry) => entry !== slug);
       const at = lastIndexOfTier(order, tier, s.sponsorTiers) + 1;
       order.splice(at, 0, slug);
-      return { sponsorOrder: order, sponsorTiers: withTier(s.sponsorTiers, slug, tier) };
+      return {
+        sponsorOrder: order,
+        sponsorTiers: withTier(s.sponsorTiers, slug, tier),
+        arrangementDirty: true,
+      };
     });
   },
 
@@ -481,7 +495,11 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     markSelectionInitialised();
     set({
       ...(settings.sponsorOrder.length > 0
-        ? { sponsorOrder: orderSelection(settings.sponsorOrder), sponsorTiers: settings.sponsorTiers }
+        ? {
+            sponsorOrder: orderSelection(settings.sponsorOrder),
+            sponsorTiers: settings.sponsorTiers,
+            arrangementDirty: true,
+          }
         : {}),
       presetId: settings.presetId,
       tone: settings.tone,
@@ -500,16 +518,9 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     // Photos are deliberately kept: "reset to defaults" is about the treatment,
     // not about throwing away the user's uploads.
     //
-    // Nor does it discard a PINNED arrangement — that is curated separately, and
-    // losing it to a treatment reset is exactly the surprise the pin exists to
-    // prevent. An unpinned arrangement does go back to manifest order.
-    const pinned = loadArrangement();
-    set({
-      ...defaultState(),
-      ...(pinned
-        ? { sponsorOrder: pinned.order, sponsorTiers: pinned.tiers, arrangementPinned: true }
-        : {}),
-    });
+    // The arrangement is not part of "defaults" any more — it lives in the
+    // manifest, and resetting the treatment goes back to whatever that file says.
+    set(defaultState());
     persistSuppressed = false;
     cancelPersist();
     clearPersisted();
@@ -545,8 +556,6 @@ function toPersisted(s: EditorState): PersistedState {
     frame: s.frame,
     scrim: s.scrim,
     ...(selectionInitialised ? { selectedSponsors: s.selectedSponsors } : {}),
-    sponsorOrder: s.sponsorOrder,
-    sponsorTiers: s.sponsorTiers,
     label: s.label,
   };
 }

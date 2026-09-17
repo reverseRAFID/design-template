@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import type { AssetBundle } from '@/assets/loader';
-import { tierLabel } from '@/assets/manifest';
+import { applyArrangement, tierLabel } from '@/assets/manifest';
+import { saveManifest, type SaveOutcome } from '@/lib/manifest-writer';
 import { Badge } from '@/components/ui/Badge';
 import { Eyebrow } from '@/components/ui/Eyebrow';
 import { Pill } from '@/components/ui/Pill';
@@ -170,9 +171,12 @@ function bundleTier(
 
 export interface SponsorListProps {
   bundle: AssetBundle;
+  /** How the manifest was saved, so App can say where the file went. */
+  onSaved?: (outcome: SaveOutcome) => void;
+  onError?: (message: string) => void;
 }
 
-export function SponsorList({ bundle }: SponsorListProps): JSX.Element {
+export function SponsorList({ bundle, onSaved, onError }: SponsorListProps): JSX.Element {
   const selectedSponsors = useEditorStore((s) => s.selectedSponsors);
   const toggleSponsor = useEditorStore((s) => s.toggleSponsor);
   const setTier = useEditorStore((s) => s.setTier);
@@ -182,9 +186,30 @@ export function SponsorList({ bundle }: SponsorListProps): JSX.Element {
   const moveSponsor = useEditorStore((s) => s.moveSponsor);
   const moveSponsorToTier = useEditorStore((s) => s.moveSponsorToTier);
   const nudgeSponsor = useEditorStore((s) => s.nudgeSponsor);
-  const arrangementPinned = useEditorStore((s) => s.arrangementPinned);
-  const saveArrangement = useEditorStore((s) => s.saveArrangement);
-  const clearArrangement = useEditorStore((s) => s.clearArrangement);
+  const arrangementDirty = useEditorStore((s) => s.arrangementDirty);
+  const revertArrangement = useEditorStore((s) => s.revertArrangement);
+  const commitArrangement = useEditorStore((s) => s.commitArrangement);
+  const [saving, setSaving] = useState(false);
+
+  /**
+   * Saving writes the arrangement into the MANIFEST — the file in the repo — so it
+   * follows the project rather than this browser (docs/DECISIONS.md D30).
+   */
+  async function save(): Promise<void> {
+    setSaving(true);
+    try {
+      const next = applyArrangement(bundle.manifest, sponsorOrder, sponsorTiers);
+      const outcome = await saveManifest(next);
+      onSaved?.(outcome);
+      // Clean again — but by adopting what was written, not by reverting to the
+      // stale in-memory order, which would show the board snapping back.
+      if (outcome === 'written') commitArrangement();
+    } catch (err) {
+      onError?.(err instanceof Error ? err.message : 'Could not save the arrangement.');
+    } finally {
+      setSaving(false);
+    }
+  }
   const [dragging, setDragging] = useState<string | null>(null);
 
   const groups = useMemo(
@@ -212,30 +237,31 @@ export function SponsorList({ bundle }: SponsorListProps): JSX.Element {
         </span>
       </div>
 
-      {/* Dragging takes effect straight away, but only a pinned arrangement is
-          guaranteed to survive a reset, a new sponsor or a fresh session. */}
+      {/* Dragging is immediate but unsaved; saving rewrites manifest.json, which
+          is what makes the board follow the project instead of this browser. */}
       <div className="flex items-center gap-2 border-y border-mt-line py-2">
         <Pill
-          variant={arrangementPinned ? 'ghost' : 'outline'}
+          variant={arrangementDirty ? 'outline' : 'ghost'}
           size="sm"
-          active={!arrangementPinned}
-          onClick={saveArrangement}
+          active={arrangementDirty}
+          disabled={saving || !arrangementDirty}
+          onClick={() => void save()}
         >
-          {arrangementPinned ? 'RE-SAVE POSITIONS' : 'SAVE POSITIONS'}
+          {saving ? 'SAVING…' : 'SAVE POSITIONS'}
         </Pill>
-        {arrangementPinned ? (
+        {arrangementDirty ? (
           <Pill
             variant="ghost"
             size="sm"
-            aria-label="Discard the saved arrangement and use the manifest order"
-            onClick={clearArrangement}
+            aria-label="Discard unsaved changes and use the manifest order"
+            onClick={revertArrangement}
           >
-            RESET
+            REVERT
           </Pill>
         ) : null}
       </div>
       <p className="mt-telemetry pb-1 pt-1.5 text-mt-text-mute">
-        {arrangementPinned ? '◆ POSITIONS SAVED' : '↳ DRAG TO ARRANGE, THEN SAVE'}
+        {arrangementDirty ? '↳ UNSAVED — SAVE TO WRITE manifest.json' : '◆ MATCHES manifest.json'}
       </p>
 
       {total === 0 ? (

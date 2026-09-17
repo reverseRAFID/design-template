@@ -27,68 +27,7 @@ export interface PersistedState {
    * for a deliberate "no sponsors".
    */
   selectedSponsors?: string[] | undefined;
-  /** Order within each tier, as arranged by dragging. */
-  sponsorOrder?: string[] | undefined;
-  /** Tier overrides, from dragging a sponsor into another tier's row. */
-  sponsorTiers?: Record<string, number> | undefined;
   label: string;
-}
-
-/** Slug -> tier. Anything that is not a positive integer is dropped, not trusted. */
-function readTierMap(raw: unknown): Record<string, number> | undefined {
-  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return undefined;
-  const out: Record<string, number> = {};
-  for (const [slug, tier] of Object.entries(raw as Record<string, unknown>)) {
-    if (typeof tier === 'number' && Number.isInteger(tier) && tier >= 1) out[slug] = tier;
-  }
-  return out;
-}
-
-/**
- * The sponsor arrangement, saved explicitly rather than on every drag.
- *
- * Separate key on purpose: it is the one piece of state the team curates
- * deliberately, and "reset to defaults" must not take it with the rest.
- */
-const ARRANGEMENT_KEY = 'mt-brandkit:arrangement:v1';
-
-export interface SponsorArrangement {
-  order: string[];
-  tiers: Record<string, number>;
-}
-
-export function loadArrangement(): SponsorArrangement | null {
-  try {
-    const raw = localStorage.getItem(ARRANGEMENT_KEY);
-    if (!raw) return null;
-    const parsed: unknown = JSON.parse(raw);
-    if (typeof parsed !== 'object' || parsed === null) return null;
-    const value = parsed as { order?: unknown; tiers?: unknown };
-    const order = readSlugs(value.order);
-    const tiers = readTierMap(value.tiers);
-    if (!order) return null;
-    return { order, tiers: tiers ?? {} };
-  } catch (err) {
-    warnOnce(err);
-    return null;
-  }
-}
-
-export function saveArrangement(arrangement: SponsorArrangement): void {
-  try {
-    localStorage.setItem(ARRANGEMENT_KEY, JSON.stringify(arrangement));
-  } catch (err) {
-    warnOnce(err);
-    throw new Error('Could not save the arrangement — the browser’s storage is full.');
-  }
-}
-
-export function clearArrangement(): void {
-  try {
-    localStorage.removeItem(ARRANGEMENT_KEY);
-  } catch (err) {
-    warnOnce(err);
-  }
 }
 
 let warned = false;
@@ -164,12 +103,6 @@ export function loadPersisted(): Partial<PersistedState> {
 
   const selectedSponsors = readSlugs(parsed['selectedSponsors']);
   if (selectedSponsors !== undefined) out.selectedSponsors = selectedSponsors;
-
-  const sponsorOrder = readSlugs(parsed['sponsorOrder']);
-  if (sponsorOrder !== undefined) out.sponsorOrder = sponsorOrder;
-
-  const sponsorTiers = readTierMap(parsed['sponsorTiers']);
-  if (sponsorTiers !== undefined) out.sponsorTiers = sponsorTiers;
 
   if (typeof parsed['label'] === 'string') out.label = parsed['label'];
 

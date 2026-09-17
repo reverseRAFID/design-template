@@ -290,7 +290,22 @@ export function App(): JSX.Element {
             ) : null}
 
             <Eyebrow className="mt-6">SPONSORS</Eyebrow>
-            {bundle ? <SponsorList bundle={bundle} /> : <p className="mt-telemetry">LOADING…</p>}
+            {bundle ? (
+              <SponsorList
+                bundle={bundle}
+                onSaved={(outcome) =>
+                  toasts.push(
+                    outcome === 'written'
+                      ? 'SAVED TO manifest.json — COMMIT IT'
+                      : 'manifest.json DOWNLOADED — REPLACE public/brand/sponsors/manifest.json',
+                    'ok',
+                  )
+                }
+                onError={(message) => toasts.push(message.toUpperCase(), 'warn')}
+              />
+            ) : (
+              <p className="mt-telemetry">LOADING…</p>
+            )}
 
             <div className="mt-6">
               <ExportBar

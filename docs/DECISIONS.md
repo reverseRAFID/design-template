@@ -747,7 +747,7 @@ through the normal path is simpler than a second code path that mutates in place
 
 ---
 
-## D27 — Saving the sponsor arrangement, explicitly
+## D27 — Saving the sponsor arrangement, explicitly (superseded by D30)
 
 Dragging already persisted `sponsorOrder` and `sponsorTiers` on a debounce, but the
 team asked for a **save button**, and they were right to: an arrangement that is
@@ -755,10 +755,13 @@ only auto-saved has no guarantee behind it. Three things could quietly undo it �
 `resetDefaults`, a re-registered manifest, or simply not knowing whether it had
 been written.
 
-**There are now two levels.** Dragging takes effect immediately, as before.
-**SAVE POSITIONS** pins the arrangement to its own storage key
-(`mt-brandkit:arrangement:v1`), written synchronously rather than on a debounce,
-and the panel then reads `◆ POSITIONS SAVED`.
+**SUPERSEDED BY D30.** Pinning to `localStorage` made the board follow one browser
+on one machine — the team hit exactly that. The save button now writes the manifest
+in the repo instead. The reasoning below about *why* an explicit save is needed
+still stands; only the destination changed.
+
+**There were two levels.** Dragging took effect immediately, and **SAVE POSITIONS**
+pinned the arrangement to its own storage key.
 
 A pinned arrangement is honoured over everything else:
 
@@ -864,3 +867,80 @@ once; but it is the thing to look at first if that ever becomes a complaint.
 first load, so the first two axe runs scored the old CSS and looked like the fix
 had failed (`transferKB: 1` was the giveaway). Unregister the worker and clear
 caches before auditing a fresh build.
+
+---
+
+## D30 — The sponsor board lives in the manifest, not the browser
+
+D27 saved the arrangement to `localStorage`. That was the wrong store: the team
+arranged the board on one machine, opened the app on another, and got the manifest
+order back. An arrangement is not a per-user preference like a zoom level — it is a
+decision about how the team's sponsors are presented, and it belongs in the repo
+with everything else that decides that.
+
+**`public/brand/sponsors/manifest.json` is now the only store of record.** Its
+`tier` and `order` fields already described the board; saving simply rewrites them.
+
+### How saving lands
+
+- **`npm run dev`** — the app POSTs to `/__manifest`, a dev-only Vite middleware
+  (`manifestWriter()` in `vite.config.ts`) that writes the file on disk. It shows up
+  in `git status`; commit it and every teammate and every browser gets that board.
+- **The deployed site** — static, with nowhere to write, so the app downloads
+  `manifest.json` and the toast says where to put it.
+
+The endpoint is `apply: 'serve'` so it never exists in a build, writes one fixed
+path so nothing can be redirected, caps the body at 256 KB, and parses and
+shape-checks the JSON before touching the file — a malformed request must not
+truncate the manifest. Verified: `GET` → 405, malformed body → 400, wrong shape →
+400, valid write → file changed and `git status` shows it modified.
+
+**A 200 is not proof the write happened** — the same trap as D28. A static host
+with an SPA fallback answers any path with `index.html` and a 200, which would make
+the app claim it had saved. `saveManifest` requires the dev plugin's own JSON
+acknowledgement before reporting success; anything else falls through to the
+download.
+
+### What changed in the app
+
+- **No arrangement in `localStorage` at all.** The key is gone, and `sponsorOrder`
+  and `sponsorTiers` were removed from the persisted settings. Every boot reads the
+  board off the manifest.
+- **`arrangementDirty` replaces `arrangementPinned`.** The panel reads
+  `◆ MATCHES manifest.json` or `↳ UNSAVED — SAVE TO WRITE manifest.json`, and
+  **REVERT** discards unsaved dragging. Save is disabled when there is nothing to
+  save.
+- **Unsaved dragging survives an asset reload.** `registerSponsors` also runs when
+  the bundle reloads mid-session — uploading a sponsor logo does that — so it now
+  keeps a dirty board and reconciles it against the new manifest rather than
+  discarding work because someone added a logo.
+- **`applyArrangement` renumbers `order` from 1 within each tier**, so the file
+  stays readable by hand and a hand edit and an app edit produce the same shape.
+  Unit-tested, including the round trip: save an arrangement, reload it, get the
+  same board.
+
+**Trade-off, stated plainly:** on the deployed site a drag is now lost on reload
+unless it is saved and committed. That is the intended behaviour — the alternative
+is the hidden per-browser state that caused the problem.
+
+### A bug the browser test caught
+
+Clearing the dirty flag after a successful write by calling `revertArrangement()`
+reset the order from `registrySlugs()` — which still held the **pre-save**
+in-memory order. The file on disk was correct, but the list snapped back to the old
+board and stayed wrong until a reload: the UI contradicting the file it had just
+written.
+
+`commitArrangement()` replaces it. The store's sponsor registry holds the same
+objects the asset bundle exposes as `meta`, so writing the new `tier`/`order` onto
+them brings the list, the layout and the file into agreement without a reload.
+
+**Verified end to end in the browser**, on the dev server: clean state reads
+`◆ MATCHES manifest.json` with save disabled; a nudge flips it to
+`↳ UNSAVED` and enables save and REVERT; saving toasts
+`SAVED TO manifest.json — COMMIT IT`, the order holds, and `git status` shows the
+file modified with the new order. Then — the actual thing the team asked for —
+**every browser store was wiped (localStorage, sessionStorage, caches, service
+worker) and the board still came back from the file.** The only key left is
+`mt-brandkit:v1`, holding preset, tone, frame, scrim, selection and label; nothing
+about the arrangement.
