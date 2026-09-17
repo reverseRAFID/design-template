@@ -17,6 +17,10 @@ export interface SharedSettings {
   frame: boolean;
   scrim: number;
   selectedSponsors: string[];
+  /** Left-to-right order within each tier. */
+  sponsorOrder: string[];
+  /** Tier overrides, from dragging a sponsor into another row. */
+  sponsorTiers: Record<string, number>;
   label: string;
 }
 
@@ -29,6 +33,8 @@ interface Wire {
   f: number;
   c: number;
   s: string[];
+  d: string[];
+  r: Record<string, number>;
   l: string;
 }
 
@@ -47,6 +53,16 @@ function fromBase64Url(encoded: string): string {
   return new TextDecoder().decode(bytes);
 }
 
+/** Slug -> tier, dropping anything that is not a positive integer. */
+function readTiers(raw: unknown): Record<string, number> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {};
+  const out: Record<string, number> = {};
+  for (const [slug, tier] of Object.entries(raw as Record<string, unknown>)) {
+    if (typeof tier === 'number' && Number.isInteger(tier) && tier >= 1) out[slug] = tier;
+  }
+  return out;
+}
+
 export function encodeSettings(settings: SharedSettings): string {
   const wire: Wire = {
     p: settings.presetId,
@@ -56,6 +72,8 @@ export function encodeSettings(settings: SharedSettings): string {
     // Two decimals is finer than the slider's own step.
     c: Math.round(settings.scrim * 100) / 100,
     s: settings.selectedSponsors,
+    d: settings.sponsorOrder,
+    r: settings.sponsorTiers,
     l: settings.label,
   };
   return toBase64Url(JSON.stringify(wire));
@@ -85,6 +103,8 @@ export function decodeSettings(encoded: string): SharedSettings | null {
       frame: wire.f === 1,
       scrim: Math.min(1, Math.max(0, scrim)),
       selectedSponsors: Array.isArray(wire.s) ? wire.s.filter((v) => typeof v === 'string') : [],
+      sponsorOrder: Array.isArray(wire.d) ? wire.d.filter((v) => typeof v === 'string') : [],
+      sponsorTiers: readTiers(wire.r),
       label: typeof wire.l === 'string' ? wire.l.slice(0, 48) : '',
     };
   } catch {

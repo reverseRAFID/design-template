@@ -182,6 +182,9 @@ export function SponsorList({ bundle }: SponsorListProps): JSX.Element {
   const moveSponsor = useEditorStore((s) => s.moveSponsor);
   const moveSponsorToTier = useEditorStore((s) => s.moveSponsorToTier);
   const nudgeSponsor = useEditorStore((s) => s.nudgeSponsor);
+  const arrangementPinned = useEditorStore((s) => s.arrangementPinned);
+  const saveArrangement = useEditorStore((s) => s.saveArrangement);
+  const clearArrangement = useEditorStore((s) => s.clearArrangement);
   const [dragging, setDragging] = useState<string | null>(null);
 
   const groups = useMemo(
@@ -208,6 +211,32 @@ export function SponsorList({ bundle }: SponsorListProps): JSX.Element {
           </Pill>
         </span>
       </div>
+
+      {/* Dragging takes effect straight away, but only a pinned arrangement is
+          guaranteed to survive a reset, a new sponsor or a fresh session. */}
+      <div className="flex items-center gap-2 border-y border-mt-line py-2">
+        <Pill
+          variant={arrangementPinned ? 'ghost' : 'outline'}
+          size="sm"
+          active={!arrangementPinned}
+          onClick={saveArrangement}
+        >
+          {arrangementPinned ? 'RE-SAVE POSITIONS' : 'SAVE POSITIONS'}
+        </Pill>
+        {arrangementPinned ? (
+          <Pill
+            variant="ghost"
+            size="sm"
+            aria-label="Discard the saved arrangement and use the manifest order"
+            onClick={clearArrangement}
+          >
+            RESET
+          </Pill>
+        ) : null}
+      </div>
+      <p className="mt-telemetry pb-1 pt-1.5 text-mt-text-mute">
+        {arrangementPinned ? '◆ POSITIONS SAVED' : '↳ DRAG TO ARRANGE, THEN SAVE'}
+      </p>
 
       {total === 0 ? (
         <p className="mt-telemetry text-mt-text-mute">No sponsors in manifest</p>

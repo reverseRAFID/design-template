@@ -44,6 +44,53 @@ function readTierMap(raw: unknown): Record<string, number> | undefined {
   return out;
 }
 
+/**
+ * The sponsor arrangement, saved explicitly rather than on every drag.
+ *
+ * Separate key on purpose: it is the one piece of state the team curates
+ * deliberately, and "reset to defaults" must not take it with the rest.
+ */
+const ARRANGEMENT_KEY = 'mt-brandkit:arrangement:v1';
+
+export interface SponsorArrangement {
+  order: string[];
+  tiers: Record<string, number>;
+}
+
+export function loadArrangement(): SponsorArrangement | null {
+  try {
+    const raw = localStorage.getItem(ARRANGEMENT_KEY);
+    if (!raw) return null;
+    const parsed: unknown = JSON.parse(raw);
+    if (typeof parsed !== 'object' || parsed === null) return null;
+    const value = parsed as { order?: unknown; tiers?: unknown };
+    const order = readSlugs(value.order);
+    const tiers = readTierMap(value.tiers);
+    if (!order) return null;
+    return { order, tiers: tiers ?? {} };
+  } catch (err) {
+    warnOnce(err);
+    return null;
+  }
+}
+
+export function saveArrangement(arrangement: SponsorArrangement): void {
+  try {
+    localStorage.setItem(ARRANGEMENT_KEY, JSON.stringify(arrangement));
+  } catch (err) {
+    warnOnce(err);
+    throw new Error('Could not save the arrangement — the browser’s storage is full.');
+  }
+}
+
+export function clearArrangement(): void {
+  try {
+    localStorage.removeItem(ARRANGEMENT_KEY);
+  } catch (err) {
+    warnOnce(err);
+  }
+}
+
 let warned = false;
 
 /** One console line per session: a blocked storage is a condition, not an error stream. */

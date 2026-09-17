@@ -23,11 +23,23 @@ export function ShareLink(): JSX.Element {
   const frame = useEditorStore((s) => s.frame);
   const scrim = useEditorStore((s) => s.scrim);
   const selectedSponsors = useEditorStore((s) => s.selectedSponsors);
+  const sponsorOrder = useEditorStore((s) => s.sponsorOrder);
+  const sponsorTiers = useEditorStore((s) => s.sponsorTiers);
   const label = useEditorStore((s) => s.label);
 
   async function copy(): Promise<void> {
     const url = buildShareUrl(
-      { presetId, tone, toneOverridden, frame, scrim, selectedSponsors, label },
+      {
+        presetId,
+        tone,
+        toneOverridden,
+        frame,
+        scrim,
+        selectedSponsors,
+        sponsorOrder,
+        sponsorTiers,
+        label,
+      },
       window.location.href,
     );
     try {
@@ -49,7 +61,7 @@ export function ShareLink(): JSX.Element {
         {status === 'copied' ? 'LINK COPIED' : status === 'failed' ? 'LINK IN ADDRESS BAR' : 'COPY SETTINGS LINK'}
       </Pill>
       <p className="mt-telemetry text-mt-text-mute">
-        Sends the treatment only — never your photo
+        Sends the treatment and the sponsor arrangement — never your photo
       </p>
     </div>
   );

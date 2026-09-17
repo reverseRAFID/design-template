@@ -81,17 +81,25 @@ is usually a typo'd filename.
 
 **Tiers are rows.** Tier 1 is the top row, tier 2 the next, tier 3 below. Every logo is drawn the
 same visual size regardless of tier — tier picks the row, not the prominence. `order` sets the
-left-to-right position, but you can also just **drag sponsors into place in the app** (or use the
-↑/↓ buttons on each row); that arrangement is saved and travels in a share link.
+left-to-right position, but you can also just **drag sponsors into place in the app** — including
+from one tier to another — or use the ↑/↓ buttons on each row.
+
+**Press SAVE POSITIONS when you are happy with the board.** Until you do, the arrangement is only a
+convenience and a "reset to defaults" will put it back. Once saved it survives resets, reloads and
+adding new sponsors, and it travels in a share link. RESET next to it is the only thing that
+discards it.
 
 Logos are not all drawn at the same height: each is nudged toward equal visual *area*, so a long
 wordmark does not swamp a square mark. `docs/DECISIONS.md` D16 and D18 cover the tuning.
 
 ### Replacing a brand logo
 
-Same idea, at `public/brand/`: `bracu-light.svg`, `bracu-dark.svg`, `mongoltori-light.svg`,
-`mongoltori-dark.svg`. `-light` is the artwork **for dark backgrounds**, `-dark` is **for light
-backgrounds**. Getting this backwards is the single easiest mistake to make here.
+Same idea, at `public/brand/`: `bracu-light.*`, `bracu-dark.*`, `mongoltori-light.svg`,
+`mongoltori-dark.svg`. **`-light` is the artwork for dark backgrounds, `-dark` is for light
+backgrounds.** Getting this backwards is the single easiest mistake to make here.
+
+SVG or PNG both work for these two — the app tries `.svg` first, then `.png`. BRACU's light-tone
+mark is the official PNG; its dark-tone one is still derived (see `docs/DECISIONS.md` D3).
 
 See `docs/DECISIONS.md` D2 and D3 for where the current files came from — the BRACU pair in
 particular is derived from the full-colour institutional mark and should be replaced with official

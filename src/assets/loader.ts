@@ -79,15 +79,18 @@ export interface AssetBundle {
 // ---------------------------------------------------------------------------
 
 /**
- * Where an artwork file lives. The naming convention is the contract with whoever
- * adds a sponsor, so it is spelled out in one place:
+ * Where an artwork file may live. The naming convention is the contract with
+ * whoever adds a logo, so it is spelled out in one place:
  *
- *   brand/<slug>-light.svg           the two top logos, cream artwork
- *   brand/<slug>-dark.svg            the two top logos, ink artwork
+ *   brand/<slug>-light.svg|png       the two top logos, cream artwork
+ *   brand/<slug>-dark.svg|png        the two top logos, ink artwork
  *   brand/sponsors/<slug>-color.svg  a sponsor's brand artwork (or .png)
  *   brand/sponsors/<slug>-dark.png   ink fallback, only for light sponsor artwork
+ *
+ * Brand logos return BOTH extensions, tried in order: vector is preferred, but
+ * BRACU's official light-tone mark is only available as a PNG (D3).
  */
-function assetUrl(
+function assetUrls(
   base: string,
   slug: string,
   artwork: Artwork,
@@ -95,25 +98,44 @@ function assetUrl(
   ext: string,
   /** Data URL, for a logo uploaded through the app rather than committed. */
   uploaded?: string,
-): string {
+): string[] {
   // An uploaded logo has no file on disk; its data URL IS the source, and `fetch`
   // handles data: the same as any other URL.
-  if (uploaded) return uploaded;
-  if (!sponsor) return `${base}brand/${slug}-${artwork}.svg`;
-  if (artwork === 'color') return `${base}brand/sponsors/${slug}-color.${ext}`;
-  return `${base}brand/sponsors/${slug}-${artwork}.png`;
+  if (uploaded) return [uploaded];
+  if (!sponsor) {
+    return [`${base}brand/${slug}-${artwork}.svg`, `${base}brand/${slug}-${artwork}.png`];
+  }
+  if (artwork === 'color') return [`${base}brand/sponsors/${slug}-color.${ext}`];
+  return [`${base}brand/sponsors/${slug}-${artwork}.png`];
+}
+
+/** First URL that resolves, or null. */
+async function fetchFirst(urls: readonly string[]): Promise<Blob | null> {
+  for (const url of urls) {
+    const blob = await fetchBlob(url);
+    if (blob) return blob;
+  }
+  return null;
 }
 
 function placeholderUrl(base: string, tone: Tone): string {
   return `${base}brand/placeholder-${tone}.svg`;
 }
 
-/** Null on any failure — a missing sponsor logo must never take the whole app down. */
+/**
+ * Null on any failure — a missing sponsor logo must never take the whole app down.
+ *
+ * A 200 is NOT proof the asset exists. Vite's dev server, and any host with an
+ * SPA fallback, answers a missing path with `index.html` and a 200; that HTML then
+ * fails to decode and the logo silently vanishes. So the content type has to agree
+ * that this is an image.
+ */
 async function fetchBlob(url: string): Promise<Blob | null> {
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
-    return await response.blob();
+    const blob = await response.blob();
+    return blob.type.startsWith('image/') ? blob : null;
   } catch {
     return null;
   }
@@ -283,15 +305,9 @@ interface LogoRequest {
 async function loadLogo(base: string, request: LogoRequest): Promise<LoadedLogo> {
   const fetched = await Promise.all(
     request.wanted.map(async (artwork) => {
-      const url = assetUrl(
-        base,
-        request.slug,
-        artwork,
-        request.sponsor,
-        request.ext,
-        request.uploaded,
+      const own = await fetchFirst(
+        assetUrls(base, request.slug, artwork, request.sponsor, request.ext, request.uploaded),
       );
-      const own = await fetchBlob(url);
       if (own) return { artwork, blob: own, fellBack: false };
       // Sponsors never fall back to a stand-in: a sponsor with no artwork is
       // reported as missing so the team can supply it, not faked.

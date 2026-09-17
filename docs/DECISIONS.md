@@ -56,7 +56,7 @@ Both are clean SVGs with a `viewBox` and no external fonts.
 
 ---
 
-## D3 — BRACU logo is derived, not official-mono
+## D3 — BRACU: official artwork on light, derived mono on dark
 
 `https://bracu-mongoltori.com/bracu-logo.svg` is the full-colour institutional mark:
 `#2a5caa` blue, `#a7a9ac` grey, `#231f20` near-black.
@@ -521,8 +521,9 @@ there. The resulting order is what the strip draws.
 - **Within a tier only.** A tier IS a row, so a cross-tier drop would silently
   re-rank a sponsor — a commercial decision, not a layout one. The store rejects it
   and the UI will not accept the drop.
-- **The order is persisted** (`sponsorOrder` in localStorage) and travels in a
-  share link, so "use these exact settings" includes the arrangement.
+- **The order is persisted** (`sponsorOrder` in localStorage). It also travels in a
+  share link — though only as of D27; this entry originally claimed it did when the
+  payload did not carry it.
 - **Keyboard parity.** Dragging is mouse-only, so every row also carries ↑ / ↓
   buttons doing the same move. The PRD requires keyboard operability and a
   drag-only feature would have quietly broken that.
@@ -743,3 +744,49 @@ Three decisions worth knowing:
 Adding or removing one re-runs the boot effect rather than mutating the bundle: the
 layout needs optical bounds measured before it can place a logo, and re-measuring
 through the normal path is simpler than a second code path that mutates in place.
+
+---
+
+## D27 — Saving the sponsor arrangement, explicitly
+
+Dragging already persisted `sponsorOrder` and `sponsorTiers` on a debounce, but the
+team asked for a **save button**, and they were right to: an arrangement that is
+only auto-saved has no guarantee behind it. Three things could quietly undo it —
+`resetDefaults`, a re-registered manifest, or simply not knowing whether it had
+been written.
+
+**There are now two levels.** Dragging takes effect immediately, as before.
+**SAVE POSITIONS** pins the arrangement to its own storage key
+(`mt-brandkit:arrangement:v1`), written synchronously rather than on a debounce,
+and the panel then reads `◆ POSITIONS SAVED`.
+
+A pinned arrangement is honoured over everything else:
+
+- **`registerSponsors` reapplies it on every boot**, reconciled against the
+  manifest — arranged slugs keep their positions, new sponsors append by manifest
+  order, and overrides for sponsors that no longer exist are dropped. So adding a
+  sponsor never scrambles a saved board.
+- **"Reset to defaults" leaves it alone.** That button is about the treatment;
+  losing a curated board to it is precisely the surprise the pin prevents. An
+  *unpinned* arrangement does go back to manifest order.
+- **RESET** next to the save button is the only thing that discards it.
+
+**Share links now carry the arrangement** (`sponsorOrder` and `sponsorTiers` in the
+payload). D19 claimed they did; they did not, and this is the fix. Junk tier values
+are dropped on decode rather than trusted, the same as the sponsor list.
+
+Verified end to end in the browser: drag, save, reset-to-defaults, reload, discard.
+
+---
+
+## D28 — A 200 is not proof an asset exists
+
+Swapping BRACU's light-tone artwork to a PNG (D3) meant brand logos had to resolve
+`.svg` **then** `.png`. That exposed a latent bug: `fetchBlob` accepted any `ok`
+response, and Vite's dev server — like any host with an SPA fallback — answers a
+missing path with `index.html` and a **200**. So the deleted `bracu-dark.svg`
+"existed", the HTML failed to decode, and the logo silently vanished.
+
+`fetchBlob` now also requires the content type to start with `image/`. Worth
+keeping in mind for any future fallback chain: on a static host, probing for a file
+by fetching it only works if you check what came back.

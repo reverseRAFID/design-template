@@ -17,7 +17,14 @@ import { DEFAULT_PRESET_ID, getPreset, getPresetOrDefault } from '@/engine/prese
 import { IDENTITY_TRANSFORM } from '@/engine/types';
 import type { ImageTransform, PresetId, Scene, SourceImage, SponsorMeta, Tone } from '@/engine/types';
 import { todayLabelDate } from '@/lib/filename';
-import { clearPersisted, loadPersisted, savePersisted } from '@/lib/persist';
+import {
+  clearArrangement as clearArrangementFromStorage,
+  clearPersisted,
+  loadArrangement,
+  loadPersisted,
+  saveArrangement as saveArrangementToStorage,
+  savePersisted,
+} from '@/lib/persist';
 import type { PersistedState } from '@/lib/persist';
 import type { SharedSettings } from '@/lib/share-url';
 
@@ -51,6 +58,8 @@ interface EditorData {
   sponsorOrder: string[];
   /** Tier overrides, set by dragging a sponsor into another tier's row. */
   sponsorTiers: Record<string, number>;
+  /** True when an arrangement has been pinned. Drives the UI's saved/unsaved hint. */
+  arrangementPinned: boolean;
   label: string;
 }
 
@@ -87,6 +96,13 @@ export interface EditorState extends EditorData {
   moveSponsorToTier(slug: string, tier: number): void;
   /** Keyboard equivalent of a drag: one step left or right within the tier. */
   nudgeSponsor(slug: string, delta: -1 | 1): void;
+  /**
+   * Pin the current arrangement. Written immediately to its own key, and reapplied
+   * on every boot, so nothing can quietly put the board back to manifest order.
+   */
+  saveArrangement(): void;
+  /** Drop the pinned arrangement and go back to the manifest's tiers and order. */
+  clearArrangement(): void;
   setLabel(v: string): void;
   /** Apply a shared settings link. Treated as a deliberate choice, like a click. */
   applyShared(settings: SharedSettings): void;
@@ -116,13 +132,29 @@ let sponsorMeta: Record<string, SponsorMeta> = {};
 export function registerSponsors(meta: Record<string, SponsorMeta>): void {
   sponsorMeta = meta;
 
-  // Reconcile any saved drag order with the manifest: keep the slugs the user
-  // arranged, in their order, then append anything new by its manifest position.
+  // A pinned arrangement wins over whatever the volatile state happens to hold —
+  // that pin is the user saying "this is the board", and it has to survive.
+  const pinned = loadArrangement();
+  const base = pinned ? pinned.order : useEditorStore.getState().sponsorOrder;
+
+  // Reconcile with the manifest: keep the slugs the user arranged, in their order,
+  // then append anything new by its manifest position. Adding a sponsor therefore
+  // never scrambles an arrangement.
   const known = registrySlugs();
-  const saved = useEditorStore.getState().sponsorOrder.filter((slug) => slug in meta);
-  const seen = new Set(saved);
+  const kept = base.filter((slug) => slug in meta);
+  const seen = new Set(kept);
+
   useEditorStore.setState({
-    sponsorOrder: [...saved, ...known.filter((slug) => !seen.has(slug))],
+    sponsorOrder: [...kept, ...known.filter((slug) => !seen.has(slug))],
+    ...(pinned
+      ? {
+          // Drop overrides for sponsors that no longer exist.
+          sponsorTiers: Object.fromEntries(
+            Object.entries(pinned.tiers).filter(([slug]) => slug in meta),
+          ),
+          arrangementPinned: true,
+        }
+      : {}),
   });
 }
 
@@ -170,6 +202,9 @@ function orderSelection(slugs: Iterable<string>): string[] {
 
 const persisted = loadPersisted();
 
+/** Pinned once, at module load, the same way `persisted` is. */
+const pinnedArrangement = loadArrangement();
+
 /**
  * True when a previous session stored a selection — including an empty one, which
  * is a real choice ("no sponsors") and must not be overwritten by setAllSponsors.
@@ -206,6 +241,7 @@ function bootState(): EditorData {
     selectedSponsors: persisted.selectedSponsors ?? [],
     sponsorOrder: persisted.sponsorOrder ?? [],
     sponsorTiers: persisted.sponsorTiers ?? {},
+    arrangementPinned: pinnedArrangement !== null,
     label: persisted.label ?? '',
   };
 }
@@ -223,6 +259,7 @@ function defaultState(): Omit<EditorData, 'image' | 'images' | 'activeIndex'> {
     selectedSponsors: registrySlugs(),
     sponsorOrder: registrySlugs(),
     sponsorTiers: {},
+    arrangementPinned: false,
     label: '',
   };
 }
@@ -382,6 +419,17 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     });
   },
 
+  saveArrangement() {
+    const s = get();
+    saveArrangementToStorage({ order: s.sponsorOrder, tiers: s.sponsorTiers });
+    set({ arrangementPinned: true });
+  },
+
+  clearArrangement() {
+    clearArrangementFromStorage();
+    set({ sponsorOrder: registrySlugs(), sponsorTiers: {}, arrangementPinned: false });
+  },
+
   moveSponsor(slug, beforeSlug) {
     if (!(slug in sponsorMeta) || !(beforeSlug in sponsorMeta) || slug === beforeSlug) return;
 
@@ -432,6 +480,9 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     frameTouched = true; // the link states a frame; a preset switch must not undo it
     markSelectionInitialised();
     set({
+      ...(settings.sponsorOrder.length > 0
+        ? { sponsorOrder: orderSelection(settings.sponsorOrder), sponsorTiers: settings.sponsorTiers }
+        : {}),
       presetId: settings.presetId,
       tone: settings.tone,
       toneOverridden: settings.toneOverridden,
@@ -448,7 +499,17 @@ export const useEditorStore = create<EditorState>()((set, get) => ({
     persistSuppressed = true;
     // Photos are deliberately kept: "reset to defaults" is about the treatment,
     // not about throwing away the user's uploads.
-    set(defaultState());
+    //
+    // Nor does it discard a PINNED arrangement — that is curated separately, and
+    // losing it to a treatment reset is exactly the surprise the pin exists to
+    // prevent. An unpinned arrangement does go back to manifest order.
+    const pinned = loadArrangement();
+    set({
+      ...defaultState(),
+      ...(pinned
+        ? { sponsorOrder: pinned.order, sponsorTiers: pinned.tiers, arrangementPinned: true }
+        : {}),
+    });
     persistSuppressed = false;
     cancelPersist();
     clearPersisted();

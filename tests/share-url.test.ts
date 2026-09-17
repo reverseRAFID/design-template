@@ -10,6 +10,8 @@ const SETTINGS: SharedSettings = {
   frame: true,
   scrim: 0.45,
   selectedSponsors: ['msi', 'altium', 'turkish-airlines'],
+  sponsorOrder: ['altium', 'msi', 'turkish-airlines'],
+  sponsorTiers: { altium: 1, msi: 3 },
   label: 'OUTREACH · DHAKA · 16.09.2026',
 };
 
@@ -26,6 +28,8 @@ describe('share-url', () => {
       frame: false,
       scrim: 0.7,
       selectedSponsors: [],
+      sponsorOrder: [],
+      sponsorTiers: {},
       label: '',
     };
     expect(decodeSettings(encodeSettings(plain))).toEqual(plain);
@@ -61,6 +65,20 @@ describe('share-url', () => {
   it('truncates an over-long label to the frame limit', () => {
     const long = 'X'.repeat(200);
     expect(decodeSettings(encodeSettings({ ...SETTINGS, label: long }))?.label).toHaveLength(48);
+  });
+
+  it('carries the arrangement, which is what "these exact settings" means', () => {
+    const back = decodeSettings(encodeSettings(SETTINGS));
+    expect(back?.sponsorOrder).toEqual(['altium', 'msi', 'turkish-airlines']);
+    expect(back?.sponsorTiers).toEqual({ altium: 1, msi: 3 });
+  });
+
+  it('drops junk tier overrides rather than trusting them', () => {
+    const encoded = encodeSettings({
+      ...SETTINGS,
+      sponsorTiers: { ok: 2, zero: 0, frac: 1.5, str: 'x' } as unknown as Record<string, number>,
+    });
+    expect(decodeSettings(encoded)?.sponsorTiers).toEqual({ ok: 2 });
   });
 
   it('drops non-string entries from the sponsor list', () => {

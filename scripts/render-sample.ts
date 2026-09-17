@@ -14,7 +14,7 @@
  * Not part of the app bundle and not shipped.
  */
 import { createCanvas, loadImage, GlobalFonts, type SKRSContext2D } from '@napi-rs/canvas';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -60,6 +60,15 @@ async function loadLogo(path: string, key: string): Promise<Raster> {
   const img = await loadImage(join(BRAND, path));
   rasterCache.set(key, img);
   return img;
+}
+
+/** Brand logos may be svg or png — BRACU's light-tone mark is a PNG (D3). */
+async function loadBrandLogo(slug: string, variant: string): Promise<Raster> {
+  for (const ext of ['svg', 'png']) {
+    const file = `${slug}-${variant}.${ext}`;
+    if (existsSync(join(BRAND, file))) return loadLogo(file, `${slug}|${variant}`);
+  }
+  throw new Error(`no artwork for ${slug}-${variant}`);
 }
 
 /**
@@ -113,8 +122,8 @@ async function main(): Promise<void> {
     readFileSync(join(BRAND, 'sponsors/manifest.json'), 'utf8'),
   ) as { sponsors: SponsorMeta[] };
 
-  const bracuImg = await loadLogo(`bracu-${variant}.svg`, `bracu|${variant}`);
-  const mtImg = await loadLogo(`mongoltori-${variant}.svg`, `mongoltori|${variant}`);
+  const bracuImg = await loadBrandLogo('bracu', variant);
+  const mtImg = await loadBrandLogo('mongoltori', variant);
 
   const sponsors: Record<string, LogoMetrics> = {};
   const meta: Record<string, SponsorMeta> = {};
