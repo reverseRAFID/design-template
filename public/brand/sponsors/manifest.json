@@ -7,56 +7,83 @@
   },
   "sponsors": [
     {
-      "slug": "completech",
-      "name": "CompleTech",
-      "tier": 1,
-      "order": 1,
-      "variants": [
-        "light",
-        "dark"
-      ],
-      "ext": "svg",
-      "url": "https://completech.fi/"
-    },
-    {
-      "slug": "msi",
-      "name": "MSI",
-      "tier": 1,
-      "order": 2,
-      "variants": [
-        "light",
-        "dark"
-      ],
-      "ext": "svg",
-      "url": "https://www.msi.com/"
-    },
-    {
-      "slug": "turkish-airlines",
-      "name": "Turkish Airlines",
-      "tier": 1,
-      "order": 3,
-      "variants": [
-        "light",
-        "dark"
-      ],
-      "ext": "svg",
-      "url": "https://www.turkishairlines.com/"
-    },
-    {
       "slug": "myactuator",
       "name": "MyActuator",
-      "tier": 2,
+      "tier": 1,
       "order": 1,
       "variants": [
         "light",
         "dark"
       ],
       "ext": "svg",
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
       "url": "https://www.myactuator.com/"
     },
     {
       "slug": "satel",
       "name": "SATEL",
+      "tier": 1,
+      "order": 2,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://satel.com/"
+    },
+    {
+      "slug": "msi",
+      "name": "MSI",
+      "tier": 1,
+      "order": 3,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.msi.com/"
+    },
+    {
+      "slug": "sbg-systems",
+      "name": "SBG Systems",
+      "tier": 1,
+      "order": 4,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.sbg-systems.com/"
+    },
+    {
+      "slug": "cytron",
+      "name": "Cytron",
+      "tier": 2,
+      "order": 1,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.cytron.io/"
+    },
+    {
+      "slug": "turkish-airlines",
+      "name": "Turkish Airlines",
       "tier": 2,
       "order": 2,
       "variants": [
@@ -64,11 +91,14 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://satel.com/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.turkishairlines.com/"
     },
     {
-      "slug": "sbg-systems",
-      "name": "SBG Systems",
+      "slug": "completech",
+      "name": "CompleTech",
       "tier": 2,
       "order": 3,
       "variants": [
@@ -76,11 +106,14 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://www.sbg-systems.com/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://completech.fi/"
     },
     {
-      "slug": "altium",
-      "name": "Altium",
+      "slug": "solidworks",
+      "name": "SolidWorks",
       "tier": 2,
       "order": 4,
       "variants": [
@@ -88,11 +121,14 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://www.altium.com/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.solidworks.com/"
     },
     {
-      "slug": "ansys",
-      "name": "Ansys",
+      "slug": "mathworks",
+      "name": "MathWorks",
       "tier": 2,
       "order": 5,
       "variants": [
@@ -100,11 +136,14 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://www.ansys.com/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.mathworks.com/"
     },
     {
-      "slug": "solidworks",
-      "name": "SolidWorks",
+      "slug": "altium",
+      "name": "Altium",
       "tier": 2,
       "order": 6,
       "variants": [
@@ -112,11 +151,14 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://www.solidworks.com/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.altium.com/"
     },
     {
-      "slug": "mathworks",
-      "name": "MathWorks",
+      "slug": "ansys",
+      "name": "Ansys",
       "tier": 2,
       "order": 7,
       "variants": [
@@ -124,11 +166,14 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://www.mathworks.com/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.ansys.com/"
     },
     {
-      "slug": "cytron",
-      "name": "Cytron",
+      "slug": "blisstyle",
+      "name": "Blisstyle",
       "tier": 3,
       "order": 1,
       "variants": [
@@ -136,11 +181,13 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://www.cytron.io/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false
     },
     {
-      "slug": "odrive",
-      "name": "ODrive Robotics",
+      "slug": "elgato",
+      "name": "Elgato",
       "tier": 3,
       "order": 2,
       "variants": [
@@ -148,22 +195,29 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://odriverobotics.com/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.elgato.com/"
     },
     {
-      "slug": "blisstyle",
-      "name": "Blisstyle",
+      "slug": "odrive",
+      "name": "ODrive Robotics",
       "tier": 3,
       "order": 3,
       "variants": [
         "light",
         "dark"
       ],
-      "ext": "svg"
+      "ext": "svg",
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://odriverobotics.com/"
     },
     {
-      "slug": "elgato",
-      "name": "Elgato",
+      "slug": "aqualink",
+      "name": "Aqualink Bangladesh",
       "tier": 3,
       "order": 4,
       "variants": [
@@ -171,22 +225,28 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://www.elgato.com/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false
     },
     {
-      "slug": "aqualink",
-      "name": "Aqualink Bangladesh",
+      "slug": "nyntax",
+      "name": "Nyntax",
       "tier": 3,
       "order": 5,
       "variants": [
         "light",
         "dark"
       ],
-      "ext": "svg"
+      "ext": "svg",
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
+      "url": "https://www.nyntax.com/"
     },
     {
-      "slug": "nyntax",
-      "name": "Nyntax",
+      "slug": "k-silver",
+      "name": "K-Silver",
       "tier": 3,
       "order": 6,
       "variants": [
@@ -194,7 +254,9 @@
         "dark"
       ],
       "ext": "svg",
-      "url": "https://www.nyntax.com/"
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false
     },
     {
       "slug": "logitech",
@@ -206,6 +268,9 @@
         "dark"
       ],
       "ext": "svg",
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false,
       "url": "https://www.logitech.com/"
     },
     {
@@ -217,30 +282,24 @@
         "light",
         "dark"
       ],
-      "ext": "svg"
+      "ext": "svg",
+      "lightArtwork": false,
+      "missing": false,
+      "placeholder": false
     },
     {
-      "slug": "k-silver",
-      "name": "K-Silver",
+      "slug": "ez-gadgets",
+      "name": "EZ Gadgets",
       "tier": 3,
       "order": 9,
       "variants": [
         "light",
         "dark"
       ],
-      "ext": "svg"
-    },
-    {
-      "slug": "ez-gadgets",
-      "name": "EZ Gadgets",
-      "tier": 3,
-      "order": 10,
-      "variants": [
-        "light",
-        "dark"
-      ],
       "ext": "png",
-      "lightArtwork": true
+      "lightArtwork": true,
+      "missing": false,
+      "placeholder": false
     }
   ]
 }
