@@ -1,0 +1,47 @@
+/**
+ * THE tokens. This is the only file in src/ allowed to contain hex values.
+ *
+ * Brand orange extracted in Task 0.1 from the live site's dark theme:
+ *   https://bracu-mongoltori.com/_next/static/chunks/3u89u9637gr6t.css
+ *   .dark { --primary:#ff6b1a; --primary-hover:#ff7d33; --primary-active:#e55a00 }
+ * See docs/DECISIONS.md.
+ */
+:root {
+  /* Brand */
+  --mt-orange:        #FF6B1A;
+  --mt-orange-hot:    #FF7D33;
+  --mt-orange-deep:   #E55A00;
+  --mt-cream:         #F4F3EE;   /* THE white. never #fff */
+  --mt-ink:           #0B0B0B;   /* THE black for overlays on light photos */
+
+  /* App surfaces (dark UI) */
+  --mt-bg:            #0A0A0A;
+  --mt-surface:       #131313;
+  --mt-surface-2:     #1C1C1C;
+  --mt-line:          rgba(244, 243, 238, 0.12);
+  --mt-line-strong:   rgba(244, 243, 238, 0.24);
+  --mt-text:          var(--mt-cream);
+  --mt-text-dim:      rgba(244, 243, 238, 0.60);
+  --mt-text-mute:     rgba(244, 243, 238, 0.38);
+
+  /* Status (use sparingly) */
+  --mt-ok:            #7CE38B;
+  --mt-warn:          #FFD166;
+
+  /* Effects */
+  --mt-glow:          0 0 0 1px var(--mt-orange), 0 0 24px rgba(255, 107, 26, 0.35);
+  --mt-chrome:        linear-gradient(180deg, rgba(244,243,238,0.22) 0%, rgba(244,243,238,0) 55%);
+  --mt-grid:          radial-gradient(rgba(244,243,238,0.10) 1px, transparent 1px);
+  --mt-grid-size:     24px;
+
+  /* Radii — Y2K bubbles, but disciplined */
+  --r-pill:           999px;
+  --r-lg:             20px;
+  --r-md:             12px;
+  --r-sm:             6px;
+
+  /* Type */
+  --font-display:     "Michroma", "Orbitron", "Eurostile", sans-serif;
+  --font-body:        "Space Grotesk", system-ui, sans-serif;
+  --font-mono:        "JetBrains Mono", "Space Mono", ui-monospace, monospace;
+}

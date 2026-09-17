@@ -1,0 +1,246 @@
+{
+  "version": 1,
+  "tiers": {
+    "1": "Platinum",
+    "2": "Gold",
+    "3": "Partner"
+  },
+  "sponsors": [
+    {
+      "slug": "completech",
+      "name": "CompleTech",
+      "tier": 1,
+      "order": 1,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://completech.fi/"
+    },
+    {
+      "slug": "msi",
+      "name": "MSI",
+      "tier": 1,
+      "order": 2,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.msi.com/"
+    },
+    {
+      "slug": "turkish-airlines",
+      "name": "Turkish Airlines",
+      "tier": 1,
+      "order": 3,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.turkishairlines.com/"
+    },
+    {
+      "slug": "myactuator",
+      "name": "MyActuator",
+      "tier": 2,
+      "order": 1,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.myactuator.com/"
+    },
+    {
+      "slug": "satel",
+      "name": "SATEL",
+      "tier": 2,
+      "order": 2,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://satel.com/"
+    },
+    {
+      "slug": "sbg-systems",
+      "name": "SBG Systems",
+      "tier": 2,
+      "order": 3,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.sbg-systems.com/"
+    },
+    {
+      "slug": "altium",
+      "name": "Altium",
+      "tier": 2,
+      "order": 4,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.altium.com/"
+    },
+    {
+      "slug": "ansys",
+      "name": "Ansys",
+      "tier": 2,
+      "order": 5,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.ansys.com/"
+    },
+    {
+      "slug": "solidworks",
+      "name": "SolidWorks",
+      "tier": 2,
+      "order": 6,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.solidworks.com/"
+    },
+    {
+      "slug": "mathworks",
+      "name": "MathWorks",
+      "tier": 2,
+      "order": 7,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.mathworks.com/"
+    },
+    {
+      "slug": "cytron",
+      "name": "Cytron",
+      "tier": 3,
+      "order": 1,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.cytron.io/"
+    },
+    {
+      "slug": "odrive",
+      "name": "ODrive Robotics",
+      "tier": 3,
+      "order": 2,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://odriverobotics.com/"
+    },
+    {
+      "slug": "blisstyle",
+      "name": "Blisstyle",
+      "tier": 3,
+      "order": 3,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg"
+    },
+    {
+      "slug": "elgato",
+      "name": "Elgato",
+      "tier": 3,
+      "order": 4,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.elgato.com/"
+    },
+    {
+      "slug": "aqualink",
+      "name": "Aqualink Bangladesh",
+      "tier": 3,
+      "order": 5,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg"
+    },
+    {
+      "slug": "nyntax",
+      "name": "Nyntax",
+      "tier": 3,
+      "order": 6,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.nyntax.com/"
+    },
+    {
+      "slug": "logitech",
+      "name": "Logitech",
+      "tier": 3,
+      "order": 7,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg",
+      "url": "https://www.logitech.com/"
+    },
+    {
+      "slug": "prolink",
+      "name": "Prolink",
+      "tier": 3,
+      "order": 8,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg"
+    },
+    {
+      "slug": "k-silver",
+      "name": "K-Silver",
+      "tier": 3,
+      "order": 9,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "svg"
+    },
+    {
+      "slug": "ez-gadgets",
+      "name": "EZ Gadgets",
+      "tier": 3,
+      "order": 10,
+      "variants": [
+        "light",
+        "dark"
+      ],
+      "ext": "png",
+      "lightArtwork": true
+    }
+  ]
+}
