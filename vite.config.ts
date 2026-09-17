@@ -86,9 +86,25 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['brand/**/*', 'fonts/**/*'],
+      // Artwork and fonts only: `brand/**/*` would sweep the sponsor manifest back
+      // into the precache behind globIgnores' back.
+      includeAssets: ['brand/**/*.{svg,png}', 'fonts/**/*.woff2'],
       workbox: {
         globPatterns: ['**/*.{js,css,html,svg,png,woff2,json}'],
+        // The sponsor board is editable DATA, not a build artefact. Precaching it
+        // pins whatever arrangement the last build shipped, so a save followed by a
+        // refresh looks like it reverted — and does so on any origin that has ever
+        // served a build, dev server included. Network first instead, with the
+        // cache kept only as the offline fallback (docs/DECISIONS.md D32).
+        globIgnores: ['**/brand/sponsors/manifest.json'],
+        runtimeCaching: [
+          {
+            urlPattern: ({ url }: { url: URL }) =>
+              url.pathname.endsWith('/brand/sponsors/manifest.json'),
+            handler: 'NetworkFirst',
+            options: { cacheName: 'mt-sponsor-manifest', expiration: { maxEntries: 1 } },
+          },
+        ],
         maximumFileSizeToCacheInBytes: 6 * 1024 * 1024,
       },
       manifest: {

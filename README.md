@@ -18,7 +18,8 @@ npm run dev        # http://localhost:5173
 
 ### Making a post
 
-1. Drop a photo on the left panel (or click, or paste from the clipboard).
+1. Drop a photo on the left panel (or click, or paste from the clipboard). On a phone, tap
+   **UPLOAD PHOTO**.
 2. Pick a ratio. `Square` for feed, `Story / Reel cover` for stories, `Wide 16:9` for YouTube and
    LinkedIn, `Link preview` for the website.
 3. Drag the photo to reframe it, scroll to zoom. Double-click to reset.

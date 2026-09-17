@@ -85,6 +85,24 @@ function OrbitMotif({ spinning }: { spinning: boolean }): JSX.Element {
   );
 }
 
+function UploadGlyph(): JSX.Element {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 16 16"
+      className="h-3.5 w-3.5 shrink-0"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.6"
+      strokeLinecap="square"
+    >
+      <path d="M8 10.5V2.6" />
+      <path d="M4.6 5.8L8 2.4l3.4 3.4" />
+      <path d="M2.5 10.5v3h11v-3" />
+    </svg>
+  );
+}
+
 export function Dropzone({ onImages, onError, hasImage }: DropzoneProps): JSX.Element {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const dragDepth = useRef(0);
@@ -209,9 +227,12 @@ export function Dropzone({ onImages, onError, hasImage }: DropzoneProps): JSX.El
     dragging ? 'border-mt-orange text-mt-orange' : 'border-mt-line-strong text-mt-text-dim hover:border-mt-orange',
   ].join(' ');
 
+  // Below `lg` this is a plain upload button — phones have no drag-and-drop, so the
+  // dashed "drop here" panel is a promise the device cannot keep (docs/DECISIONS.md D31).
   const panelCls = [
-    'relative flex min-h-[11rem] w-full flex-col items-center justify-center gap-2 overflow-hidden',
-    'rounded-lg border-2 border-dashed p-6 text-center transition-colors duration-state ease-out',
+    'relative flex min-h-[8rem] w-full flex-col items-center justify-center gap-2 overflow-hidden',
+    'rounded-lg border-2 p-6 text-center transition-colors duration-state ease-out',
+    'lg:min-h-[11rem] lg:border-dashed',
     dragging
       ? 'border-mt-orange bg-mt-surface-2 text-mt-orange'
       : 'border-mt-line-strong text-mt-text-dim hover:border-mt-orange hover:text-mt-text',
@@ -258,17 +279,25 @@ export function Dropzone({ onImages, onError, hasImage }: DropzoneProps): JSX.El
         <button
           type="button"
           onClick={open}
-          aria-label="Add an image: drop a file here, click to browse, or paste from the clipboard"
+          aria-label="Add an image: choose a photo, or drop a file here"
           aria-busy={busy}
           className={panelCls}
           {...dragProps}
         >
           <OrbitMotif spinning={dragging} />
-          <span className="mt-telemetry relative">
+
+          {/* Touch: an explicit upload control. Pointer: the drop panel it always was. */}
+          <span className="mt-telemetry relative flex items-center gap-2 rounded-pill border border-mt-orange px-3 py-1.5 text-mt-orange lg:hidden">
+            <UploadGlyph />
+            {busy ? 'DECODING …' : 'UPLOAD PHOTO'}
+          </span>
+          <span className="mt-telemetry relative hidden lg:block">
             {busy ? '› DECODING …' : '› DROP IMAGE OR CLICK'}
           </span>
+
           <span className="relative text-[11px] text-mt-text-mute">
-            JPG · PNG · WEBP · HEIC — or paste
+            JPG · PNG · WEBP · HEIC
+            <span className="hidden lg:inline"> — or paste</span>
           </span>
         </button>
       )}

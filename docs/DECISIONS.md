@@ -947,7 +947,7 @@ about the arrangement.
 
 ---
 
-## D31 — Mobile was broken in three ways, all found by looking
+## D31 — Mobile was broken in four ways, all found by looking
 
 Tested at 390px by rendering the app inside a narrow iframe — the OS window
 resize did not change the page's viewport, so the media queries never fired and
@@ -983,3 +983,45 @@ still hover-revealed.
 
 Also fixed in passing: the telemetry field still read `DEFAULT: URC · IRC · ERC`,
 which stopped being true at D23 when the standing text was removed.
+
+**4. The photo dropzone advertised a gesture phones do not have.** The empty state
+read `› DROP IMAGE OR CLICK` inside a dashed drop panel, with `— or paste` under
+it. Tapping it already opened the file picker, so only the affordance was wrong —
+but an affordance that names an impossible gesture reads as a broken control.
+Below `lg` the panel is now an ordinary upload button: a solid border, an orange
+`⬆ UPLOAD PHOTO` pill and the format list without the paste hint. From `lg` up it
+is the dashed drop panel it always was. One button, one file input, two faces —
+no device sniffing, just a breakpoint. Verified at 390px: tapping fires the file
+input's own click, and the target is 344×128 CSS px.
+
+## D32 — The sponsor manifest is never cached, by anything
+
+The board would revert on refresh even though SAVE POSITIONS had written
+`manifest.json` to disk. The write was fine; the *read* was not.
+
+`manifest.json` was in the service worker's **precache** — `globPatterns` swept
+`json`, and `includeAssets: ['brand/**/*']` swept it a second time. Precaching is
+right for artwork, which only changes when the build does, and wrong for the board,
+which is the one file in `public/` the app rewrites at runtime. The effect is
+nasty because it is not scoped to production: any origin that has ever served a
+build keeps that service worker, so `localhost:5173` under `npm run dev` would
+answer from a precache belonging to a build made days earlier. The dev server
+wrote the file, the page reloaded, and the worker handed back the old board — with
+nothing in the UI to suggest a stale read.
+
+Now: `globIgnores` keeps it out of the precache, `includeAssets` is narrowed to
+`brand/**/*.{svg,png}` so it cannot slip back in behind that, and a NetworkFirst
+runtime route keeps the offline story intact — network wins whenever it is
+reachable, the cached copy is only the fallback. `loadManifest` also fetches with
+`cache: 'no-store'`, which closes the same hole in the plain HTTP cache.
+
+Verified against a real build with a live worker: edit the served `manifest.json`,
+refresh, board follows. Before the fix the same test kept showing the old order.
+
+**This is also the answer to "does save actually work?" — yes, and it always did.**
+On `npm run dev` it writes `public/brand/sponsors/manifest.json` and the status
+line reads `SAVED TO manifest.json — COMMIT IT`. On the deployed site there is
+nowhere to write, so the file **downloads** and the line reads `manifest.json
+DOWNLOADED — REPLACE public/brand/sponsors/manifest.json`; refreshing there reverts
+by design, because the copy in the repo has not changed yet. The two cases are
+told apart by the status line, not by the button.

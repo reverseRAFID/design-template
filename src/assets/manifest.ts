@@ -180,7 +180,9 @@ export async function loadManifest(
 
   let raw: unknown;
   try {
-    const response = await fetch(url);
+    // The board is rewritten in place by SAVE POSITIONS, so a cached copy is a
+    // wrong copy: always ask the network (docs/DECISIONS.md D32).
+    const response = await fetch(url, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
     }
