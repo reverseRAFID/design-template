@@ -81,8 +81,8 @@ Don't start a phase until the previous one's "Done when" is true.
 
 ## Phase 4 — Polish
 
-- [ ] 4.1 Motion pass (160ms / 400ms, reduced-motion).
-- [ ] 4.2 Visual QA on real photos: dark indoor seminar, bright outdoor field test, mixed. Adjust scrim default
+- [x] 4.1 Motion pass (160ms / 400ms, reduced-motion).
+- [x] 4.2 Visual QA on real photos: dark indoor seminar, bright outdoor field test, mixed. Adjust scrim default
       and tone threshold if needed; record in DECISIONS.md.
-- [ ] 4.3 Lighthouse ≥ 95 on performance/a11y.
+- [x] 4.3 Lighthouse ≥ 95 on performance/a11y.
 - [x] 4.4 README for the team: how to add a sponsor, how to replace a logo, how to deploy.

@@ -790,3 +790,77 @@ missing path with `index.html` and a **200**. So the deleted `bracu-dark.svg`
 `fetchBlob` now also requires the content type to start with `image/`. Worth
 keeping in mind for any future fallback chain: on a static host, probing for a file
 by fetching it only works if you check what came back.
+
+---
+
+## D29 — Phase 4: motion, real-photo QA, and the accessibility pass
+
+### 4.1 Motion
+
+§ D asks for 160ms ease-out on state changes and 400ms on a preset switch, with
+`prefers-reduced-motion` honoured. Three gaps were closed:
+
+- **The active glow never animated.** `Pill` used `transition-colors`, and the
+  active state's orange ring is a `box-shadow` — so it snapped in. The transition
+  now names `box-shadow` explicitly.
+- **`ease-out` was missing** on the sponsor-row and thumbnail transitions.
+- **The 400ms preset switch did not exist.** The canvas's CSS box now eases over
+  `--mt-preset-ms`, but **only while a switch is in flight** — applied via a
+  `data-resizing` attribute for the duration. A standing transition would also
+  catch a window resize, which fires continuously as the user drags the window and
+  would visibly lag.
+
+**Not done, deliberately:** overlay geometry does not interpolate between the two
+layouts. § D's "overlays glide" would mean lerping every placed rect across the
+switch. It is possible — `renderComposition` would still be the only draw path —
+but it doubles the layout surface for a 400ms effect nobody exports, and a
+half-interpolated frame is not a composition anyone would want.
+
+### 4.2 Visual QA on real photos
+
+`npm run sample -- --photo <path>` renders any real photo through the actual
+pipeline, **including auto tone detection**, so QA reflects what the team would
+see rather than a tone nobody would pick.
+
+Checked against five real photos from `img/`. Auto-tone discriminated correctly
+every time: the bright Mars-Desert team photo → **light**, the indoor EMK seminar,
+the outreach sessions and the rover shots → **dark**.
+
+- **Tone threshold 0.52 stands.** No misclassification to correct.
+- **Scrim default 0.7 stands.** On the indoor seminar the top of the frame is
+  already dark, so the scrim is invisible and harmless; it earns its keep on a
+  dark-tone photo with a bright ceiling. Nothing in the sample set argued for a
+  different default.
+- **Fixed a bug in the QA script itself**, not the app: it picked the artwork
+  variant from the CLI flag *before* auto-tone ran, so a light-tone render drew the
+  cream BRACU logo — nearly invisible on a bright sky. It now loads both variants
+  and lets the raster provider choose. Verified separately in the browser that the
+  app had always resolved the right one (cream `rgb(244,243,238)` for dark tone,
+  official navy `rgb(41,51,95)` for light).
+
+### 4.3 Accessibility and performance
+
+**Lighthouse itself was not run** — no Chrome binary is reachable from the CLI in
+this environment, and reporting a score I did not measure would be worthless. The
+substance was audited instead, against the **production build**:
+
+**axe-core 4.10: 0 violations, 44 passes.** It found two real problems first:
+
+- **`color-contrast`, serious, 17 nodes.** `--mt-text-mute` at § B's
+  `rgba(244,243,238,0.38)` measures **3.34:1** on every surface in the app — under
+  WCAG AA's 4.5:1 for small text. 0.48 is the minimum that clears it; the token is
+  now **0.50**. This deviates from § B, which chose the value by eye rather than by
+  measurement.
+- **`label`, critical.** Both `sr-only` file inputs — the photo dropzone and the
+  sponsor upload — had no accessible name. Both now carry an `aria-label`.
+
+**Measured performance** on the production build: FCP 260ms, load complete 122ms,
+36 requests, ~1.0 MB transferred. Of that, `dist/brand` is 1.4 MB on disk against
+396 KB of JS/CSS and 76 KB of fonts — **the sponsor artwork is the payload**. It is
+precached by the service worker, so the PRD's "laptop on bad event Wi-Fi" pays it
+once; but it is the thing to look at first if that ever becomes a complaint.
+
+**One trap worth recording:** the service worker served the *previous* build on
+first load, so the first two axe runs scored the old CSS and looked like the fix
+had failed (`transferKB: 1` was the giveaway). Unregister the worker and clear
+caches before auditing a fresh build.

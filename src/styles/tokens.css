@@ -22,7 +22,12 @@
   --mt-line-strong:   rgba(244, 243, 238, 0.24);
   --mt-text:          var(--mt-cream);
   --mt-text-dim:      rgba(244, 243, 238, 0.60);
-  --mt-text-mute:     rgba(244, 243, 238, 0.38);
+  /*
+   * 0.50, not § B's 0.38. Measured against every surface in the app, 0.38 gives
+   * 3.34:1 — under WCAG AA's 4.5:1 for small text, and axe flagged 17 nodes.
+   * 0.48 is the minimum that clears it; 0.50 leaves a margin. See DECISIONS D29.
+   */
+  --mt-text-mute:     rgba(244, 243, 238, 0.50);
 
   /* Status (use sparingly) */
   --mt-ok:            #7CE38B;
@@ -33,6 +38,10 @@
   --mt-chrome:        linear-gradient(180deg, rgba(244,243,238,0.22) 0%, rgba(244,243,238,0) 55%);
   --mt-grid:          radial-gradient(rgba(244,243,238,0.10) 1px, transparent 1px);
   --mt-grid-size:     24px;
+
+  /* Motion (§ D): state changes, and the slower preset switch */
+  --mt-state-ms:      160ms;
+  --mt-preset-ms:     400ms;
 
   /* Radii — Y2K bubbles, but disciplined */
   --r-pill:           999px;

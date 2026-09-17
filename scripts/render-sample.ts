@@ -10,6 +10,7 @@
  *   npm run sample -- --light   # light tone (ink artwork)
  *   npm run sample -- --overlay # brand layer alone, on transparency
  *   npm run sample -- --label "OUTREACH · DHAKA · 17.09.2026"
+ *   npm run sample -- --photo img/outreach.jpg   # a real photo, with auto tone
  *
  * Not part of the app bundle and not shipped.
  */
@@ -19,6 +20,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { computeLayout } from '../src/engine/layout';
+import { detectTone } from '../src/engine/tone';
 import { PRESETS } from '../src/engine/presets';
 import { renderComposition } from '../src/engine/render';
 import { DEFAULT_SCRIM } from '../src/engine/metrics';
@@ -108,8 +110,45 @@ function measure(img: Raster, slug: string, placeholder: boolean): LogoMetrics {
   };
 }
 
+/**
+ * The same verdict `src/lib/auto-tone.ts` reaches, reimplemented here because that
+ * module imports through the `@/` alias, which tsx does not resolve from a script.
+ * Kept deliberately thin — it calls the engine's own `detectTone`.
+ */
+function sampleToneLocal(layout: ReturnType<typeof computeLayout>, source: Raster | ReturnType<typeof createCanvas>): Tone | null {
+  const placement = layout.image;
+  if (!placement) return null;
+
+  const w = 128;
+  const h = Math.max(1, Math.round((w * layout.H) / layout.W));
+  const c = createCanvas(w, h);
+  const ctx = c.getContext('2d');
+  ctx.drawImage(
+    source as never,
+    placement.sx,
+    placement.sy,
+    placement.sw,
+    placement.sh,
+    0,
+    0,
+    w,
+    h,
+  );
+
+  const factor = w / layout.W;
+  const regions = layout.toneRegions.regions.map((r) => ({
+    x: r.x * factor,
+    y: r.y * factor,
+    w: r.w * factor,
+    h: r.h * factor,
+  }));
+  return detectTone(ctx.getImageData(0, 0, w, h), regions, [...layout.toneRegions.weights]);
+}
+
 async function main(): Promise<void> {
   const wantFrame = process.argv.includes('--frame');
+  const photoArg = process.argv.indexOf('--photo');
+  const photoPath = photoArg >= 0 ? process.argv[photoArg + 1] : undefined;
   const overlayOnly = process.argv.includes('--overlay');
   const labelArg = process.argv.indexOf('--label');
   const label = labelArg >= 0 ? process.argv[labelArg + 1] : undefined;
@@ -122,6 +161,11 @@ async function main(): Promise<void> {
     readFileSync(join(BRAND, 'sponsors/manifest.json'), 'utf8'),
   ) as { sponsors: SponsorMeta[] };
 
+  // Both variants, because auto-tone can flip the tone AFTER this point — the
+  // raster provider then picks by the artwork the layout asks for.
+  for (const slug of ['bracu', 'mongoltori']) {
+    for (const v of ['light', 'dark']) await loadBrandLogo(slug, v);
+  }
   const bracuImg = await loadBrandLogo('bracu', variant);
   const mtImg = await loadBrandLogo('mongoltori', variant);
 
@@ -148,13 +192,25 @@ async function main(): Promise<void> {
     meta,
   };
 
-  // A synthetic photo. renderComposition fills the canvas with ink first, so
-  // without one the light-tone samples would be ink-on-ink and prove nothing.
-  const PHOTO_W = 2400;
-  const PHOTO_H = 1600;
-  const photo = createCanvas(PHOTO_W, PHOTO_H);
+  // A real photo when one is given — that is the only way to QA tone detection and
+  // the scrim against the kind of images the team actually posts.
+  let photo: ReturnType<typeof createCanvas> | Raster;
+  let PHOTO_W: number;
+  let PHOTO_H: number;
+  let autoTone: Tone | null = null;
+
+  if (photoPath) {
+    const img = await loadImage(join(ROOT, photoPath));
+    photo = img;
+    PHOTO_W = img.width;
+    PHOTO_H = img.height;
+  } else {
+  const synthetic = createCanvas(2400, 1600);
+  PHOTO_W = 2400;
+  PHOTO_H = 1600;
+  photo = synthetic;
   {
-    const p = photo.getContext('2d');
+    const p = synthetic.getContext('2d');
     const g = p.createLinearGradient(0, 0, PHOTO_W, PHOTO_H);
     if (tone === 'dark') {
       g.addColorStop(0, '#3A2F26');
@@ -169,11 +225,10 @@ async function main(): Promise<void> {
     p.fillStyle = tone === 'dark' ? 'rgba(244,243,238,0.06)' : 'rgba(11,11,11,0.06)';
     for (let x = 0; x < PHOTO_W; x += 160) p.fillRect(x, 0, 80, PHOTO_H);
   }
+  }
 
-  const rasters = (slug: string, artwork: string): Drawable | null => {
-    const key = slug === 'bracu' || slug === 'mongoltori' ? `${slug}|${variant}` : `${slug}|${artwork}`;
-    return (rasterCache.get(key) as unknown as Drawable) ?? null;
-  };
+  const rasters = (slug: string, artwork: string): Drawable | null =>
+    (rasterCache.get(`${slug}|${artwork}`) as unknown as Drawable) ?? null;
 
   for (const preset of PRESETS) {
     const scene: Scene = {
@@ -189,7 +244,19 @@ async function main(): Promise<void> {
       stamp: todayLabelDate(),
     };
 
-    const layout = computeLayout(scene, assets);
+    let layout = computeLayout(scene, assets);
+
+    // The app auto-detects tone from the framed photo; do the same here or the
+    // QA is of a tone nobody would ever see.
+    if (photoPath && !process.argv.includes('--light') && !process.argv.includes('--dark')) {
+      const detected = sampleToneLocal(layout, photo);
+      if (detected) {
+        autoTone = detected;
+        scene.tone = detected;
+        layout = computeLayout(scene, assets);
+      }
+    }
+
     const canvas = createCanvas(preset.w, preset.h);
     const ctx = canvas.getContext('2d') as unknown as SKRSContext2D;
 
@@ -204,19 +271,14 @@ async function main(): Promise<void> {
     });
 
     const suffix = `${scene.frame ? '-frame' : ''}${overlayOnly ? '-overlay' : ''}`;
-    const file = join(OUT, `${preset.id}-${tone}${suffix}.png`);
+    const file = join(OUT, `${photoPath ? 'qa-' : ''}${preset.id}-${scene.tone}${suffix}.png`);
     writeFileSync(file, canvas.toBuffer('image/png'));
-
-    // Overlay mode is only correct if the background really is transparent.
-    const px = ctx.getImageData(0, 0, preset.w, preset.h).data;
-    let opaque = 0;
-    for (let i = 3; i < px.length; i += 4 * 31) if ((px[i] ?? 0) > 8) opaque += 1;
-    const coverage = ((opaque / (px.length / (4 * 31))) * 100).toFixed(1);
 
     const dropped = layout.strip.dropped.length;
     console.log(
       `${preset.id.padEnd(11)} ${preset.w}x${preset.h}  rows=${layout.strip.rows.length}` +
-        `  dropped=${dropped}  ink=${coverage.padStart(5)}%  -> ${file.replace(ROOT + '/', '')}`,
+        `  dropped=${dropped}  tone=${scene.tone}${autoTone ? ' (auto)' : ''}` +
+        `  -> ${file.replace(ROOT + '/', '')}`,
     );
   }
 }

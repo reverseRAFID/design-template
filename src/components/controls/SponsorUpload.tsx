@@ -159,6 +159,7 @@ export function SponsorUpload({
         ref={fileRef}
         type="file"
         accept="image/svg+xml,image/png"
+        aria-label="Choose a sponsor logo file"
         className="sr-only"
         onChange={(event) => {
           const file = event.target.files?.[0];

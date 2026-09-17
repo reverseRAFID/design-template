@@ -32,7 +32,10 @@ export type PillProps =
 
 const BASE =
   'relative inline-flex select-none items-center justify-center gap-2 rounded-pill ' +
-  'border font-body font-medium transition-colors duration-state ease-out ' +
+  // box-shadow explicitly: the active state's orange glow is a shadow, and
+  // `transition-colors` alone left it snapping in (§ D: 160ms ease-out).
+  'border font-body font-medium duration-state ease-out ' +
+  'transition-[color,background-color,border-color,box-shadow] ' +
   'disabled:pointer-events-none disabled:opacity-40';
 
 const SIZES: Record<PillSize, string> = {

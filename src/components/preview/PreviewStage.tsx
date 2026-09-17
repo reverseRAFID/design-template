@@ -12,7 +12,7 @@
  * useful preview of the template.
  */
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { CornerReadouts } from './CornerReadouts';
 import { SafeZoneGuide } from './SafeZoneGuide';
@@ -36,6 +36,9 @@ export interface PreviewStageProps {
 }
 
 const HELP_ID = 'mt-preview-help';
+
+/** Must match --mt-preset-ms in tokens.css (§ D's 400ms preset switch). */
+const PRESET_MS = 400;
 
 /** Same cell of the canvas layer's grid, so overlay and canvas stay registered. */
 const CELL = { gridArea: '1 / 1' } as const;
@@ -72,6 +75,21 @@ export function PreviewStage({ bundle, onDropped }: PreviewStageProps): JSX.Elem
 
   const { dragging } = usePanZoom(canvasRef, { enabled: hasImage });
 
+  // § D wants the 400ms ease-out only for a preset switch. Flagging the canvas for
+  // the duration of the change keeps a window resize — which fires continuously
+  // as the user drags — from inheriting it and lagging.
+  const [resizing, setResizing] = useState(false);
+  const firstRender = useRef(true);
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    setResizing(true);
+    const done = setTimeout(() => setResizing(false), PRESET_MS + 60);
+    return () => clearTimeout(done);
+  }, [presetId]);
+
   const preset = getPreset(presetId);
   const label = [
     `Preview: ${preset.name}, ${preset.w} by ${preset.h} pixels`,
@@ -91,6 +109,7 @@ export function PreviewStage({ bundle, onDropped }: PreviewStageProps): JSX.Elem
             role="img"
             aria-label={label}
             aria-describedby={hasImage ? HELP_ID : undefined}
+          data-resizing={resizing ? 'true' : undefined}
             tabIndex={hasImage ? 0 : -1}
             style={CELL}
             className={[

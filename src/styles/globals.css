@@ -60,6 +60,18 @@
   canvas {
     display: block;
   }
+
+  /*
+   * § D: 400ms for a preset switch, "the canvas resizes". Applied only while the
+   * switch is in flight — a standing transition would also lag a window resize,
+   * which fires continuously as the user drags. The reduced-motion block below
+   * neutralises it.
+   */
+  canvas[data-resizing='true'] {
+    transition:
+      width var(--mt-preset-ms) ease-out,
+      height var(--mt-preset-ms) ease-out;
+  }
 }
 
 @layer components {

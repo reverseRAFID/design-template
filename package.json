@@ -11,7 +11,7 @@
     "test:watch": "vitest",
     "lint": "node scripts/check-no-white.mjs && eslint .",
     "typecheck": "tsc -b --noEmit",
-    "sample": "tsx scripts/render-sample.ts",
+    "sample": "tsx --tsconfig tsconfig.app.json scripts/render-sample.ts",
     "import:sponsors": "node scripts/import-sponsors.mjs"
   },
   "dependencies": {

@@ -224,6 +224,8 @@ export function Dropzone({ onImages, onError, hasImage }: DropzoneProps): JSX.El
         ref={inputRef}
         type="file"
         multiple
+        // sr-only and opened by the panel, so it has no visible label of its own.
+        aria-label="Choose photos to brand" 
         accept={ACCEPT}
         className="sr-only"
         tabIndex={-1}

@@ -74,7 +74,7 @@ export function ThumbnailStrip(): JSX.Element | null {
                 aria-current={active ? 'true' : undefined}
                 aria-label={`Photo ${index + 1}: ${image.name}`}
                 onClick={() => selectImage(index)}
-                className={`block overflow-hidden rounded-sm border transition-colors duration-state ${
+                className={`block overflow-hidden rounded-sm border transition-colors duration-state ease-out ${
                   active
                     ? 'border-mt-orange shadow-glow'
                     : 'border-mt-line opacity-70 hover:opacity-100'

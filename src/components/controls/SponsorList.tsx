@@ -256,7 +256,7 @@ export function SponsorList({ bundle }: SponsorListProps): JSX.Element {
             if (dragging) moveSponsorToTier(dragging, group.tier);
             setDragging(null);
           }}
-          className={`rounded-md pt-4 transition-colors duration-state first:pt-0 ${
+          className={`rounded-md pt-4 transition-colors duration-state ease-out first:pt-0 ${
             dragging && bundleTier(bundle.meta, sponsorTiers, dragging) !== group.tier
               ? 'bg-mt-surface-2/40'
               : ''
