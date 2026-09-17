@@ -1071,3 +1071,80 @@ save rather than instantly, since it arrives by redeploy; a save needs GitHub to
 up; and the project now has a backend, which `CLAUDE.md` previously ruled out. It
 is one function, one file, no state, and no photo ever reaches it — those never
 leave the browser.
+
+## D34 — A saved board reverting on every reload was never the file
+
+Reported as "every reload it changes to default, even though manifest.json in
+GitHub is the updated one". It was not: the file was right in the repo, right on
+disk, and right in the response the server sent. What was wrong was what the
+browser chose to hand the app instead.
+
+D32 took `manifest.json` out of the precache and added `cache: 'no-store'`. Both
+were necessary; neither was sufficient, for two reasons that only show up on a
+machine with history.
+
+**A service worker ignores `no-store`.** `no-store` instructs the HTTP cache. A
+worker's fetch handler sits in front of that and answers from its own Cache
+Storage regardless of what the request asked for. So a worker installed by an
+*older* build — one whose precache still contained the board — keeps serving that
+board, and no amount of rewriting the file or redeploying changes what the page
+sees. The fix is to ask for a URL no precache has an entry for: the manifest is
+now fetched with a `?v=<timestamp>` query. Workbox matches precache entries by
+exact URL (bar `utm_`/`fbclid`), so the query misses every entry and falls through
+to the network — including on workers already installed on people's machines,
+which is the point. Verified in a real build: a fabricated precache entry matches
+the bare URL and does not match the query-bearing one.
+
+**Dev never gets a replacement worker.** Serve a production build once from
+`localhost:5173` — a `vite preview` on that port, `npx serve dist`, anything — and
+that worker stays registered for that origin. `npm run dev` ships no service
+worker, so nothing ever supersedes it, and every subsequent dev session is served
+someone's week-old precache with no sign on screen. `src/main.tsx` now unregisters
+any worker it finds in a dev build and deletes its caches, warning once in the
+console. Verified by installing a stand-in worker on the dev origin: one reload
+and it is gone, caches with it.
+
+**And the update itself was a reload behind.** The auto-injected registration
+installs a new build and leaves it for the next time the tab is opened from
+scratch, so the first load after a deploy renders the *previous* build — the
+mechanism behind "I deployed and nothing changed". `registerSW({ immediate: true })`
+in `src/main.tsx` (with `injectRegister: null`, so there is exactly one
+registration) takes control and reloads once. Verified: before, a new build needed
+two reloads; after, one.
+
+The lesson worth keeping: **a file being correct in git, on disk and in the HTTP
+response is not evidence the app read it.** Between the response and the app sit
+an HTTP cache and a service worker, and only one of those two honours cache
+headers.
+
+## D35 — The function signature, and why the live site kept showing the old board
+
+Two faults, found by pointing curl at the deployed site instead of reasoning about
+it. Worth recording together, because each one alone looked like the other.
+
+**The endpoint was crashing.** `GET /api/manifest` returned
+`FUNCTION_INVOCATION_FAILED`, a 500. It was written with named `GET`/`POST`
+exports taking a `Request` and returning a `Response` — which is the **Next.js App
+Router** convention, not Vercel's. A plain file in `api/` is invoked the Node way,
+`(req, res)`, and exporting the wrong shape is not a build error: it type-checks,
+it deploys, and it fails at the first request. It is now `export default async
+function handler(req, res)`, with the small slice of Node's req/res it uses typed
+locally so the file still needs no dependency. `readBody` normalises all four
+things the platform may hand over — parsed object, string, Buffer, or an unread
+stream — because which one you get depends on the content type.
+
+**The site was serving an old deployment.** The board in the repo said
+`myactuator, satel, msi, sbg-systems`; the site served `completech, msi,
+turkish-airlines` — and kept doing so after a redeploy, which is what made it look
+like caching. It was not. The live bundle contained the SAVE KEY field, so the
+deployment was built from the commit that added it, and the two later commits —
+the ones that changed `manifest.json` — had never been built. **Vercel's
+"Redeploy" rebuilds the commit that deployment was made from, not the newest
+one**, so pressing it repeatedly rebuilds the same stale source for ever. A push,
+or "Deploy" from the latest commit, is what moves it.
+
+The diagnostic that settled it, and the one to reach for next time: fetch the
+deployed asset itself. `curl https://<site>/sw.js` says which build is live,
+`curl https://<site>/brand/sponsors/manifest.json` says what the server actually
+returns, and comparing that with `git show origin/main:<file>` says whether the
+deployment is even from the commit you think it is. Three commands, no theories.

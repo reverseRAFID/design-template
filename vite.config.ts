@@ -86,6 +86,9 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      // src/main.tsx registers it, so the update can be taken immediately rather
+      // than a tab-close later. Two registrations would fight over that.
+      injectRegister: null,
       // Artwork and fonts only: `brand/**/*` would sweep the sponsor manifest back
       // into the precache behind globIgnores' back.
       includeAssets: ['brand/**/*.{svg,png}', 'fonts/**/*.woff2'],

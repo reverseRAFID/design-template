@@ -181,8 +181,11 @@ export async function loadManifest(
   let raw: unknown;
   try {
     // The board is rewritten in place by SAVE POSITIONS, so a cached copy is a
-    // wrong copy: always ask the network (docs/DECISIONS.md D32).
-    const response = await fetch(url, { cache: 'no-store' });
+    // wrong copy. `no-store` handles the HTTP cache; the unique query handles a
+    // service worker, which answers from its precache whatever the request asks
+    // for — but only for URLs it has an entry for, and it has none for this one
+    // (docs/DECISIONS.md D34).
+    const response = await fetch(`${url}?v=${Date.now()}`, { cache: 'no-store' });
     if (!response.ok) {
       throw new Error(`HTTP ${response.status} ${response.statusText}`.trim());
     }
