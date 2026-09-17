@@ -297,7 +297,7 @@
         "dark"
       ],
       "ext": "png",
-      "lightArtwork": true,
+      "lightArtwork": false,
       "missing": false,
       "placeholder": false
     }
