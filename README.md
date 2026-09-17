@@ -69,6 +69,10 @@ img/partners/<slug>.svg      the logo IN ITS OWN BRAND COLOURS  (or .png)
    npm run import:sponsors
    ```
 
+**In a hurry?** There is an **UPLOAD A LOGO** panel in the app — pick a sponsor (or add a new one),
+choose an SVG or PNG, and it appears immediately. That is per-browser only: it does not reach your
+teammates and it does not reach the repo, so still do the steps above when you get a moment.
+
 Sponsors appear in **full brand colour** on the banner, so send the colour original — no mono
 version needed. **If you add the table row but no file, the sponsor is simply left blank**: it stays
 in the manifest, the importer lists it under "awaiting artwork", and nothing is drawn. Drop the file
@@ -107,12 +111,12 @@ Static build, no backend, no environment variables.
 npm run build      # -> dist/
 ```
 
+- **GitHub Pages** — already wired. `.github/workflows/deploy.yml` lints, tests and publishes on
+  every push to `main`. The only setup is once, in the repo: **Settings → Pages → Source = "GitHub
+  Actions"**. No secrets to add.
 - **Vercel** — framework preset "Vite". Nothing else to configure.
-- **GitHub Pages project site** — the app lives under `/<repo>/`, so build with the base set:
-  ```bash
-  VITE_BASE=/<repo>/ npm run build
-  ```
-  then publish `dist/`.
+- **By hand**, if you need a different host: a project site lives under `/<repo>/`, so build with
+  `VITE_BASE=/<repo>/ npm run build` and publish `dist/`.
 
 ---
 

@@ -697,3 +697,49 @@ and two exports of the same scene must be identical.
 **Diamond bullets** still flank the rows. They survive where the barcode did not
 because they are small enough to fit the padding whatever the rows do — the strip
 is clamped to `box.w − 2·padX`, so there is always at least `padX` a side.
+
+---
+
+## D26 — Uploading a sponsor logo from the app
+
+`.github/workflows/deploy.yml` publishes to GitHub Pages on push to `main`. It
+runs the same three gates as local development, in the same order — lint (which
+includes the no-pure-white check), test, build — and builds with
+`VITE_BASE=/<repo>/` because a project site is served from a sub-path (D6). Pull
+requests build and test but do not publish. One-time repo setup: Settings → Pages →
+Source = "GitHub Actions". No secrets, because the app is entirely client-side.
+
+### The upload panel
+
+A sponsor logo can now be added in the browser: pick an existing sponsor the
+manifest is still waiting on, or add one the manifest does not have at all, and
+choose an SVG or PNG. It is measured, placed and exported immediately.
+
+**This is a stopgap, and the panel says so on screen.** The permanent home is still
+`img/partners/<slug>.svg` plus a row in the importer (D17). The upload exists for
+the case the PRD actually describes — someone at an event, with a logo that arrived
+by email an hour ago, and no time for a deploy.
+
+Consequences of `localStorage`, all deliberate:
+
+- **Per-browser.** It does not reach teammates and it does not reach the repo.
+- **Budgeted.** 400 KB a file, 2.5 MB total, checked before writing, because data
+  URLs run ~33% larger than the file and the editor's own settings share the ~5 MB
+  the browser allows. Over budget is a readable error, not a silent failure.
+- **Lost when site data is cleared.**
+
+Three decisions worth knowing:
+
+- **An uploaded logo counts as a placeholder**, so the header keeps reading
+  `● ASSETS: PLACEHOLDER` until the artwork is committed to the repo. It is real
+  artwork, but it exists in one browser, and the status tag should say so.
+- **Uploaded logos are auto-selected.** Uploading one and then finding it unticked
+  reads as the feature having failed. `includeSponsors` unions them into the
+  selection on every boot.
+- **Uploading for an existing sponsor takes only the artwork**, keeping the
+  manifest's name, tier and order — otherwise filling in a missing logo could
+  quietly re-rank the sponsor.
+
+Adding or removing one re-runs the boot effect rather than mutating the bundle: the
+layout needs optical bounds measured before it can place a logo, and re-measuring
+through the normal path is simpler than a second code path that mutates in place.
